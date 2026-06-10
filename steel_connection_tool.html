@@ -421,6 +421,19 @@ function beamElevH(x0,yc,len,h,tf,cls="out"){
   out.push(Pr.l(x0,yc-t+tf,x0+len,yc-t+tf,cls));
   return out;
 }
+// Beam in elevation shown as a finite SEGMENT with break (cut) lines at both ends —
+// reads as a continuous UB/UC: top flange = 2 lines, bottom flange = 2 lines, broken ends.
+function beamElevBreak(xc,len,yc,h,tf,cls="out"){
+  const x0=xc-len/2, x1=xc+len/2, t=h/2, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
+  out.push(Pr.l(x0,top,x1,top,cls));            // top flange outer
+  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));// top flange inner
+  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));// bottom flange inner
+  out.push(Pr.l(x0,bot,x1,bot,cls));            // bottom flange outer
+  for(const xe of [x0,x1])                       // break line (zig) at each cut end
+    out.push(Pr.path([["M",xe,top],["L",xe,yc+h*0.16],["L",xe-z,yc+h*0.08],
+                      ["L",xe+z,yc-h*0.08],["L",xe,yc-h*0.16],["L",xe,bot]],cls,{w:1.0}));
+  return out;
+}
 // bolt holes in elevation: grid n1(rows,vert) x n2(cols,horiz) centred at (cx,cy)
 function boltGridElev(cx,cy,n1,n2,p1,p2,d0,tag){
   const out=[], cts=[]; const rr=d0/2;
@@ -725,23 +738,23 @@ GEO["BB-FIN"] = function(st){
         bCallout(st.n1*st.n2, st.bolt, st.boltGrade, d0)], {lh:14});
 
   /* ----- View B : MAIN beam ELEVATION + supported beam SECTION + bolt side-views ----- */
-  const Lmain = Math.max(1.5*prim.h, sec.b + 320);
-  B.push(...beamElevH(-Lmain/2, 0, Lmain, prim.h, prim.tf, "out"));    // main beam, web face
+  const scx = st.tp + sec.tw/2;
+  const Lmain = Math.max(sec.b + 300, 440);
+  B.push(...beamElevBreak(scx, Lmain, 0, prim.h, prim.tf, "out"));     // main beam in elevation (broken segment)
   // fin plate seen edge-on at main web near face
   B.push(Pr.hatch([[0,yc-hp/2],[st.tp,yc-hp/2],[st.tp,yc+hp/2],[0,yc+hp/2]],"steel",{edge:false}));
   B.push(Pr.r(0, yc-hp/2, st.tp, hp, "plate"));
   B.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
   // supported beam SECTION (cut, hatched), web bolted to plate
-  const scx = st.tp + sec.tw/2;
   const iS = iSectionPts(scx, yc, sec.h, sec.b, sec.tf, sec.tw);
   B.push(Pr.hatch(iS,"steel",{edge:false})); B.push(Pr.poly(iS,"out"));
   for(const y of ys) B.push(...boltSide(0, y, st.tp+sec.tw, "left", b.d, b.washer));
   // dims
   if(st.n1>1) chainV(B, scx, sec.b/2+34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
-  dimV(B, -Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
+  dimV(B, scx-Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
   B.push(Pr.weld(0, yc-hp/2+10, st.tp+60, yc-hp/2-40, {kind:st.weldType, size:st.weldLeg, both:true, text:"typ."}));
-  label(B, -Lmain/4, prim.h/2+18, prim.name+"  (main)", {anchor:"middle", weight:"bold"});
-  label(B, scx, yc+sec.h/2+18, sec.name+"  (supported)", {anchor:"middle", weight:"bold"});
+  label(B, scx, prim.h/2+34, prim.name+"  (main)", {anchor:"middle", weight:"bold"});
+  label(B, scx, prim.h/2+16, sec.name+"  (supported)", {anchor:"middle", size:10});
   return {A,B};
 };
 
@@ -766,8 +779,8 @@ GEO["BB-EP"] = function(st){
   label(A, g+tep+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)",{anchor:"middle",weight:"bold"});
 
   /* View B : MAIN beam ELEVATION + end plate FACE with 2 columns of bolts */
-  const half=st.w/2, Lmain=Math.max(1.4*prim.h, bpw+260);
-  B.push(...beamElevH(-Lmain/2,0,Lmain,prim.h,prim.tf,"out"));
+  const half=st.w/2, Lmain=Math.max(bpw+280, 440);
+  B.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out"));
   const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw); B.push(Pr.poly(iS,"hidden")); // supported beam behind plate
   B.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate"));                                    // end plate face
   for(const y of ys){ for(const sx of [-half,half]){ B.push(Pr.c(sx,y,d0/2,"bolt",{tag:"bolts"}));
@@ -775,8 +788,8 @@ GEO["BB-EP"] = function(st){
   dimH(B, yc+hp/2+20, -half, half, 16, String(st.w), "w");
   chainV(B, -bpw/2, -34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
   dimV(B, -Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
-  label(B, 0, Math.max(yc+hp/2, prim.h/2)+34, [plCallout(tep,bpw,hp,st.grade), bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:14,anchor:"middle"});
-  label(B, -Lmain/4, prim.h/2+18, prim.name+"  (main)",{anchor:"middle",weight:"bold"});
+  label(B, 0, Math.max(yc+hp/2, prim.h/2)+40, [plCallout(tep,bpw,hp,st.grade), bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:14,anchor:"middle"});
+  label(B, 0, -prim.h/2-12, prim.name+"  (main)",{anchor:"middle",weight:"bold"});
   return {A,B};
 };
 
@@ -800,20 +813,19 @@ GEO["BB-W"] = function(st){
   label(A,Lsec*0.5,top+30,sec.name+"  (welded)",{anchor:"middle",weight:"bold"});
 
   /* View B : MAIN beam ELEVATION + supported beam SECTION + stiffeners */
-  const Lmain=Math.max(1.5*prim.h, sec.b+320);
-  B.push(...beamElevH(-Lmain/2,0,Lmain,prim.h,prim.tf,"out"));
+  const scx=sec.tw/2, Lmain=Math.max(sec.b+320, 460);
+  B.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out"));
   // stiffeners on the main web aligned to supported beam flanges (pair)
   if(st.ts>0){ for(const yy of [yc+sec.h/2-sec.tf/2, yc-sec.h/2+sec.tf/2])
-      B.push(Pr.r(-Lmain*0.18, yy-st.ts/2, Lmain*0.36, st.ts, "plate"));
-    label(B,-Lmain*0.18-6, yc, "stiff "+st.ts, {anchor:"middle",rot:-90,size:9}); }
-  const scx=sec.tw/2;
+      B.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
+    label(B,scx-Lmain*0.36-6, yc, "stiff "+st.ts, {anchor:"middle",rot:-90,size:9}); }
   const iS=iSectionPts(scx,yc,sec.h,sec.b,sec.tf,sec.tw);
   B.push(Pr.hatch(iS,"steel",{edge:false})); B.push(Pr.poly(iS,"out"));
   B.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
   B.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
   dimV(B,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
-  dimV(B,-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
-  label(B,-Lmain/4,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});
+  dimV(B,scx-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
+  label(B,scx,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});
   return {A,B};
 };
 
