@@ -417,13 +417,13 @@ function iSectionPtsH(cx,cy,h,b,tf,tw){
 // origin = (x0,yc) left end at mid-height; runs +x by len, depth h.
 function beamElevH(x0,yc,len,h,tf,cls="out"){
   const t=h/2, x1=x0+len, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
-  out.push(Pr.l(x0,top,x1,top,cls));               // top flange outer
-  out.push(Pr.l(x0,bot,x1,bot,cls));               // bottom flange outer
-  out.push(Pr.l(x0,top,x0,bot,cls));               // near end face
-  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));  // top flange inner
-  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));  // bottom flange inner
+  out.push(Pr.l(x0,top,x1,top,cls,{w:1.9}));        // top flange outer
+  out.push(Pr.l(x0,bot,x1,bot,cls,{w:1.9}));        // bottom flange outer
+  out.push(Pr.l(x0,top,x0,bot,cls,{w:1.9}));        // near end face
+  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.2}));  // top flange inner
+  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.2}));  // bottom flange inner
   out.push(Pr.path([["M",x1,top],["L",x1,yc+h*0.16],["L",x1-z,yc+h*0.08],
-                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.0})); // far-end break
+                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.4})); // far-end break
   return out;
 }
 // Beam in elevation shown as a finite SEGMENT with break (cut) lines at both ends —
@@ -699,13 +699,13 @@ function beamElevNotched(x0, x1, yc, h, tf, notch, cls="out"){
           segs.push(["A", r, x0+bN.len, bot+bN.dep-r, false]); segs.push(["L", x0+bN.len, bot]); }
   else  { segs.push(["L", x0, bot]); }
   segs.push(["L", x1, bot]);                              // bottom edge to far end (open)
-  out.push(Pr.path(segs, cls));
+  out.push(Pr.path(segs, cls, {w:1.9}));                  // bold beam outline
   // far-end break (cut) line — shows the beam continues; makes the elevation read as a beam
   out.push(Pr.path([["M",x1,top],["L",x1,yc+h*0.16],["L",x1-z,yc+h*0.08],
-                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.0}));
+                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.4}));
   const tfTop=top-tf, tfBot=bot+tf;                       // flange inner lines (=> 2 lines per flange)
-  out.push(Pr.l(tN?x0+tN.len:x0, tfTop, x1, tfTop, cls, {w:1.0}));
-  out.push(Pr.l(bN?x0+bN.len:x0, tfBot, x1, tfBot, cls, {w:1.0}));
+  out.push(Pr.l(tN?x0+tN.len:x0, tfTop, x1, tfTop, cls, {w:1.2}));
+  out.push(Pr.l(bN?x0+bN.len:x0, tfBot, x1, tfBot, cls, {w:1.2}));
   return out;
 }
 
