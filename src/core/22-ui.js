@@ -28,7 +28,7 @@ function numField(key){
 }
 function enumField(key){ const c=CONTROLS[key], s=el("select");
   for(const o of c.opts){ const op=el("option",{value:o,text:o},s); if(state[key]==o)op.selected=true; }
-  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType")buildPanel(); redraw(); }; return s; }
+  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType"||key==="finPos")buildPanel(); redraw(); }; return s; }
 function boolField(key){ const lab=el("label",{class:"chk"}); const cb=el("input",{type:"checkbox"},lab); cb.checked=!!state[key];
   cb.onchange=()=>{ state[key]=cb.checked; buildPanel(); redraw(); }; lab.appendChild(document.createTextNode(" on")); return lab; }
 function sectionField(key){
@@ -38,7 +38,7 @@ function sectionField(key){
   inp.onchange=()=>{ state[key]=inp.value.trim().toUpperCase(); buildPanel(); redraw(); };
   inp.oninput=()=>{ state[key]=inp.value.trim().toUpperCase(); redrawD(); };
   if(state[key]==="CUSTOM"){
-    const ck=key==="secSec"?"secCustom":"primCustom", cv=state[ck];
+    const ck=key==="secSec"?"secCustom":key==="secSecB"?"secCustomB":"primCustom", cv=state[ck];
     const grid=el("div",{class:"fld full",style:"display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px"},frag);
     for(const f of ["h","b","tf","tw","r"]){ const w=el("div",{},grid); el("label",{text:f,style:"font-size:10px"},w);
       const ii=el("input",{type:"number",value:cv[f],step:f==="r"?0.5:1,style:"width:100%"},w);
@@ -66,6 +66,10 @@ function buildPanel(){
       // conditional visibility
       if(k==="doublerT" && !state.doubler) continue;
       if(k==="wallT" && state.concType!=="wall") continue;
+      if((k==="notchMode"||k==="notchLen"||k==="notchDep"||k==="hp") && state.conn==="BB-FIN" && state.finPos==="outside") continue;
+      if(c.group===G.FAR && !state.beam2) continue;                               // far-beam controls only when 2nd beam on
+      if(k==="ts" && !state.farStiff && (state.conn==="BB-FIN"||state.conn==="BB-EP")) continue; // stiffener thk only when far stiffener on (BB-W has its own ts)
+      if((k==="notchModeB"||k==="hpB") && state.conn==="BB-FIN" && state.finPosB==="outside") continue;  // outside far plate: no cope / auto depth
       if((k==="sa1"||k==="sa2")) {/* keep */}
       const f=el("div",{class:"fld"+(c.type==="section"?" full":"")},body);
       const lab=el("label",{},f); lab.textContent=c.label; if(c.hint){ const ic=el("span",{class:"ico",title:c.hint,text:" ⓘ"}); lab.appendChild(ic); }

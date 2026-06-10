@@ -223,7 +223,7 @@ function sectionsByType(t){
    The UI builds inputs from this; geometry & validation read state[key].
    group: accordion section.  type: number|enum|section|bool.
    ===================================================================== */
-const G = {MEM:"Members",PLATE:"Plate",BOLT:"Bolts",WELD:"Welds",ANC:"Anchors / Concrete",STIFF:"Stiffeners",GEOM:"Geometry"};
+const G = {MEM:"Members",PLATE:"Plate",BOLT:"Bolts",WELD:"Welds",ANC:"Anchors / Concrete",STIFF:"Stiffeners",GEOM:"Geometry",FAR:"Far beam (side 2)"};
 const CONTROLS = {
   // ---- members ----
   secSec:{group:G.MEM,type:"section",def:"UKB533X210X92",label:"Supported member",kind:"beam"},
@@ -255,9 +255,35 @@ const CONTROLS = {
   grout:{group:G.PLATE,type:"number",def:30,min:0,max:75,step:5,label:"Grout thickness"},
   // ---- notch (BB) ----
   align:{group:G.GEOM,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Beam alignment",hint:"top = tops flush (typical floor); centre = mid-aligned"},
+  finPos:{group:G.GEOM,type:"enum",def:"between",opts:["between","outside"],label:"Fin plate position",hint:"between = secondary frames inside the supporting flanges (auto-cope); outside = extended fin plate cantilevers past the flange tip, secondary stays clear (no cope)"},
+  beam2:{group:G.GEOM,type:"bool",def:false,label:"Beam on far side",hint:"adds an independent secondary beam + fin plate framing into the opposite face of the supporting web; View B becomes that beam's elevation"},
+  farStiff:{group:G.GEOM,type:"bool",def:false,label:"Far-side stiffener plate",hint:"adds a stiffener / backing plate on the opposite web face, mirroring the fin plate"},
   notchMode:{group:G.GEOM,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Notch"},
   notchLen:{group:G.GEOM,type:"number",def:0,min:0,max:400,step:5,label:"Notch length",hint:"0 = auto"},
   notchDep:{group:G.GEOM,type:"number",def:0,min:0,max:300,step:5,label:"Notch depth",hint:"0 = auto"},
+  // ---- far beam (side 2 of a double-sided BB-FIN; independent of the near beam) ----
+  secSecB:{group:G.FAR,type:"section",def:"UKB406X178X60",label:"Far beam section",kind:"beam"},
+  secCustomB:{hidden:true,def:{h:406.4,b:177.9,tf:12.8,tw:7.9,r:10.2}},
+  alignB:{group:G.FAR,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Far beam alignment"},
+  finPosB:{group:G.FAR,type:"enum",def:"between",opts:["between","outside"],label:"Far fin plate position"},
+  notchModeB:{group:G.FAR,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Far notch"},
+  tpB:{group:G.FAR,type:"number",def:10,min:6,max:25,step:1,label:"Far plate thk tₚ"},
+  hpB:{group:G.FAR,type:"number",def:0,min:0,max:2000,step:5,label:"Far plate height",hint:"0 = auto"},
+  bpB:{group:G.FAR,type:"number",def:0,min:0,max:600,step:5,label:"Far plate width",hint:"0 = auto"},
+  gB:{group:G.FAR,type:"number",def:10,min:0,max:30,step:1,label:"Far gap g"},
+  boltB:{group:G.FAR,type:"enum",def:"M20",opts:BOLT_SIZES,label:"Far bolt size"},
+  boltGradeB:{group:G.FAR,type:"enum",def:"8.8",opts:BOLT_GRADES,label:"Far grade"},
+  n1B:{group:G.FAR,type:"number",def:3,min:1,max:12,step:1,label:"Far rows n₁"},
+  n2B:{group:G.FAR,type:"number",def:1,min:1,max:3,step:1,label:"Far cols n₂"},
+  p1B:{group:G.FAR,type:"number",def:70,min:20,max:400,step:5,label:"Far pitch p₁"},
+  p2B:{group:G.FAR,type:"number",def:70,min:20,max:400,step:5,label:"Far gauge p₂"},
+  e1B:{group:G.FAR,type:"number",def:40,min:10,max:200,step:5,label:"Far end dist e₁"},
+  e2B:{group:G.FAR,type:"number",def:40,min:10,max:200,step:5,label:"Far edge dist e₂"},
+  holeB:{group:G.FAR,type:"enum",def:"standard",opts:["standard","oversize"],label:"Far hole type"},
+  weldTypeB:{group:G.FAR,type:"enum",def:"fillet",opts:["fillet","partial-pen butt","full-pen butt"],label:"Far weld type"},
+  weldLegB:{group:G.FAR,type:"number",def:6,min:4,max:15,step:1,label:"Far fillet leg s"},
+  tepB:{group:G.FAR,type:"number",def:10,min:8,max:40,step:1,label:"Far end plate thk"},
+  wB:{group:G.FAR,type:"number",def:90,min:50,max:300,step:5,label:"Far cross-centres w"},
   // ---- welds ----
   weldType:{group:G.WELD,type:"enum",def:"fillet",opts:["fillet","partial-pen butt","full-pen butt"],label:"Weld type"},
   weldLeg:{group:G.WELD,type:"number",def:6,min:4,max:15,step:1,label:"Fillet leg s"},
@@ -284,11 +310,15 @@ const CONTROLS = {
 
 /* Per-connection UI: ordered list of control keys (grouped automatically). */
 const SCHEMA = {
-  "BB-FIN":["secSec","primSec","align","notchMode","notchLen","notchDep","tp","hp","bp","g",
-            "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
-  "BB-EP":["secSec","primSec","align","notchMode","notchLen","notchDep","tep","g",
-           "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg"],
-  "BB-W":["secSec","primSec","align","notchMode","notchLen","notchDep","weldType","weldLeg","ts","stiffHeight"],
+  "BB-FIN":["secSec","primSec","align","finPos","beam2","farStiff","notchMode","notchLen","notchDep","tp","hp","bp","g",
+            "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg","ts",
+            "secSecB","alignB","finPosB","notchModeB","tpB","hpB","bpB","gB",
+            "boltB","boltGradeB","n1B","n2B","p1B","p2B","e1B","e2B","holeB","weldTypeB","weldLegB"],
+  "BB-EP":["secSec","primSec","align","beam2","farStiff","notchMode","notchLen","notchDep","tep","g",
+           "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg","ts",
+           "secSecB","alignB","notchModeB","tepB","gB","boltB","boltGradeB","n1B","p1B","e1B","wB","holeB","weldTypeB","weldLegB"],
+  "BB-W":["secSec","primSec","align","beam2","farStiff","notchMode","notchLen","notchDep","weldType","weldLeg","ts","stiffHeight",
+          "secSecB","alignB","notchModeB","weldTypeB","weldLegB"],
   "BC-FIN":["secSec","primSec","axis","tp","hp","bp","g",
             "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
   "BC-EP":["secSec","primSec","axis","epMode","tep","g",
@@ -348,16 +378,18 @@ let state = defaultState("BB-FIN");
 // Is a control part of the active connection's UI?
 function active(key){ return (SCHEMA[state.conn]||[]).includes(key); }
 
-/* resolve the two member slots for the active connection */
-function members(){
-  const sec = resolveSec(state.secSec, state.secCustom);
-  const prim = resolveSec(state.primSec, state.primCustom);
+/* resolve the two member slots for the active connection.
+   `st` defaults to the global state but can be a derived state (e.g. the far-beam
+   side of a double-sided BB-FIN) so geometry can be computed for either beam. */
+function members(st=state){
+  const sec = resolveSec(st.secSec, st.secCustom);
+  const prim = resolveSec(st.primSec, st.primCustom);
   return {sec, prim};
 }
 
-/* bolt + anchor resolved props */
-function boltProps(){ return BOLTS[state.bolt]||BOLTS.M20; }
-function holeDia(){ const b=boltProps(); return state.hole==="oversize"? b.d+ (b.d>=24?8:6) : b.d0; }
+/* bolt + anchor resolved props (accept a derived state, default global) */
+function boltProps(st=state){ return BOLTS[st.bolt]||BOLTS.M20; }
+function holeDia(st=state){ const b=boltProps(st); return st.hole==="oversize"? b.d+ (b.d>=24?8:6) : b.d0; }
 function anchorDia(){ return ANCHOR_D[state.anchorSize]||20; }
 function hefVal(){ return state.hef>0 ? state.hef : Math.round(12*anchorDia()/5)*5; }
 /* ===== core/06-primitives.js =========================================== */
@@ -576,6 +608,7 @@ function drawWeld(g,p,T){
   const rx=ex+side*refLen;
   svgel("line",{x1:x,y1:y,x2:ex,y2:ey,stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g);
   svgel("line",{x1:ex,y1:ey,x2:rx,y2:ey,stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g);
+  if(p.allAround) svgel("circle",{cx:ex,cy:ey,r:4.5,fill:"none",stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g); // weld-all-around flag
   const sym=ex+side*10;
   if(p.kind==="fillet"){
     svgel("polygon",{points:`${sym},${ey} ${sym+side*9},${ey} ${sym},${ey-9}`,fill:col},g); // arrow-side flag (above)
@@ -633,6 +666,9 @@ function renderView(svg, prims, unifiedScale){
 // supported-beam centroid offset relative to main-beam centroid (y=0)
 function alignYc(align, prim, sec){ if(align==="centre") return 0; const d=(prim.h-sec.h)/2; return align==="bottom"? -d : d; }
 function notchAuto(st, sec, prim){
+  // "outside" fin plate: secondary beam stays clear of the supporting flanges
+  // (cantilevered/extended fin plate) so it is never coped.
+  if(st.conn==="BB-FIN" && st.finPos==="outside") return {top:null, bot:null, mode:"none", len:0, dep:0};
   const yc = alignYc(st.align||"top", prim, sec);
   const len = st.notchLen>0 ? st.notchLen : Math.ceil((prim.b/2 - prim.tw/2 + 10)/5)*5;
   const dep = st.notchDep>0 ? st.notchDep : Math.ceil((prim.tf + prim.r + 5)/5)*5;
@@ -651,22 +687,33 @@ function notchAuto(st, sec, prim){
   return {top:N, bot:N, mode:"double", len, dep};
 }
 function finGeom(st){
-  const {sec,prim} = members(), b = boltProps();
+  const {sec,prim} = members(st), b = boltProps(st);
   const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*b.d);
-  const bp = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2;
+  const bpRef = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2; // plate length measured from the support reference face
+  // "outside" (extended) fin plate: the secondary beam frames past the supporting flange
+  // tip, so the plate cantilevers from the welded web out to the bolt line. It also fills
+  // the clear depth between the supporting flanges and is fillet-welded all-around (web +
+  // both flange undersides); the bolt group still sits at the supported-beam connection.
+  const outside = st.conn==="BB-FIN" && st.finPos==="outside";
+  const ftip = (prim.b - prim.tw)/2;                   // supporting flange tip (web right face at x=0)
+  const baseX = outside ? ftip : 0;                    // x of the support reference face for gap + bolts
+  const bp = baseX + bpRef;                            // full plate length from the welded web edge
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
   const yc = alignYc(st.align||"top", prim, sec);      // supported-beam framing offset
+  const pyHalf = prim.h/2 - prim.tf;                   // supporting flange underside (symmetric ±)
+  const plCy = outside ? 0 : yc;                       // fin plate centre y
+  const plH  = outside ? 2*pyHalf : hp;                // fin plate height (full clear depth when outside)
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
-  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(la + j*st.p2);
-  return {sec, prim, b, la, bp, hp, yc, ys, xs, d0:holeDia()};
+  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(baseX + la + j*st.p2);
+  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, plCy, plH, pyHalf, d0:holeDia(st)};
 }
 function epGeom(st){
-  const {sec,prim}=members(), b=boltProps();
+  const {sec,prim}=members(st), b=boltProps(st);
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
   const yc = alignYc(st.align||"top", prim, sec);
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
   const bpw = st.w + 2*Math.max(st.e2, 1.5*b.d);       // end-plate width
-  return {sec, prim, b, hp, yc, ys, bpw, d0:holeDia()};
+  return {sec, prim, b, hp, yc, ys, bpw, d0:holeDia(st)};
 }
 
 /* small builder utilities (mm) */
@@ -779,135 +826,245 @@ function bconCommon(st){
 }
 
 /* =====================================================================
+   Double-sided BB framing — shared by BB-FIN / BB-EP / BB-W.
+   A second supported beam (independent "…B" controls) frames into the far
+   face of the supporting web; View B becomes its (mirrored) elevation. An
+   optional full-depth stiffener can be added on the far web face.
+   ===================================================================== */
+// Map the independent far-beam controls (…B) onto a standard state. Supporting member shared.
+function farBeamState(st){
+  return Object.assign({}, st, {
+    secSec:st.secSecB, secCustom:st.secCustomB,
+    align:st.alignB, finPos:st.finPosB, notchMode:st.notchModeB, notchLen:0, notchDep:0,
+    tp:st.tpB, hp:st.hpB, bp:st.bpB, g:st.gB, tep:st.tepB, w:st.wB,
+    bolt:st.boltB, boltGrade:st.boltGradeB, n1:st.n1B, n2:st.n2B,
+    p1:st.p1B, p2:st.p2B, e1:st.e1B, e2:st.e2B, hole:st.holeB,
+    weldType:st.weldTypeB, weldLeg:st.weldLegB,
+  });
+}
+// Horizontally mirror an elevation (about x=0): negate x; flip arc sweep, vertical-dim
+// offsets, weld leaders, and start/end text anchors (text stays upright/left-to-right).
+function mirrorX(prims){
+  return prims.map(p=>{
+    const q=Object.assign({},p);
+    if(p.t==="l") q.a=[-p.a[0],p.a[1],-p.a[2],p.a[3]];
+    else if(p.t==="r") q.x=-(p.x+p.w);
+    else if(p.t==="c") q.cx=-p.cx;
+    else if(p.t==="p"||p.t==="h") q.pts=p.pts.map(z=>[-z[0],z[1]]);
+    else if(p.t==="pa") q.segs=p.segs.map(s=> s[0]==="A"?["A",s[1],-s[2],s[3],!s[4]] : s[0]==="Z"?s : [s[0],-s[1],s[2]]);
+    else if(p.t==="t"){ q.x=-p.x; if(p.anchor==="start")q.anchor="end"; else if(p.anchor==="end")q.anchor="start"; }
+    else if(p.t==="d"){ q.x1=-p.x1; q.x2=-p.x2; if(p.dir==="v")q.off=-(p.off||0); }
+    else if(p.t==="w"){ q.x=-p.x; q.lx=-p.lx; }
+    return q;
+  });
+}
+// Full-depth stiffener on the far web face: flange to flange, fitted to the flange tip,
+// fillet-welded all-round (far web face + both flange undersides).
+function farStiffener(out, prim, ts, wleg){
+  const sTop=prim.h/2-prim.tf, sBot=-(prim.h/2-prim.tf), xWeb=-prim.tw, xTip=-(prim.b+prim.tw)/2;
+  out.push(Pr.r(xTip, sBot, xWeb-xTip, sTop-sBot, "plate"));
+  out.push(...weldRun(xWeb, sBot, xWeb, sTop, wleg, -1));   // far web-face weld
+  out.push(...weldRun(xTip, sTop, xWeb, sTop, wleg, 1));    // top-flange weld
+  out.push(...weldRun(xTip, sBot, xWeb, sBot, wleg, -1));   // bottom-flange weld
+  label(out, xTip, sTop+14, "stiffener PL "+Math.round(ts)+" — full depth, welded all round", {anchor:"start", size:10});
+}
+// Compose the two BB views: A = near elevation (+ far stiffener); B = mirrored far-beam
+// elevation when a far beam is enabled, otherwise the connection's own section view.
+function bbDoubleSided(st, elevFn, sectFn){
+  const A = elevFn(st, {stiff: st.farStiff, tag: st.beam2 ? "near, side 1" : "supported"});
+  const B = st.beam2 ? mirrorX(elevFn(farBeamState(st), {tag:"far, side 2"})) : sectFn(st, {stiff: st.farStiff});
+  return {A, B};
+}
+
+/* =====================================================================
    GEOMETRY registry.  Each connection file attaches GEO[id] = fn(state).
    ===================================================================== */
 const GEO = {};
 /* ===== connections/BB-EP.js ============================================ */
 /* ---------------- BB-EP : Beam-to-beam bolted end plate ------------- */
-GEO["BB-EP"] = function(st){
-  const A=[], B=[], eg=epGeom(st), {sec,prim,b,hp,yc,ys,bpw,d0}=eg;
+// End-plate ELEVATION (supporting SECTION + supported beam in elevation, end plate edge-on),
+// parameterised by `st` so it draws either the near beam or the independent far beam.
+function epElevation(st, opts){
+  opts = opts||{};
+  const out=[], eg=epGeom(st), {sec,prim,hp,yc,ys,bpw,d0}=eg;
   const notch = notchAuto(st, sec, prim);
-  const Lsec=Math.max(sec.h*1.0,360), tep=st.tep, g=st.g;
-  const ftip=(prim.b-prim.tw)/2;
-
-  /* View A : MAIN beam SECTION + supported beam ELEVATION (end plate edge-on) */
+  const Lsec=Math.max(sec.h*1.0,360), tep=st.tep, g=st.g, wleg=Math.max(st.weldLeg,4);
   const iP=iSectionPts(-prim.tw/2,0,prim.h,prim.b,prim.tf,prim.tw);
-  A.push(Pr.hatch(iP,"steel",{edge:false})); A.push(Pr.poly(iP,"out"));
-  label(A,-(prim.b+prim.tw)/2-6,0,prim.name+"  (main)",{anchor:"middle",rot:-90,weight:"bold"});
+  out.push(Pr.hatch(iP,"steel",{edge:false})); out.push(Pr.poly(iP,"out"));
+  label(out,-(prim.b+prim.tw)/2-6,0,prim.name+"  (main)",{anchor:"middle",rot:-90,weight:"bold"});
+  if(opts.stiff) farStiffener(out, prim, st.ts, wleg);    // optional full-depth far-side stiffener
   // end plate edge-on, bolted to main web at x=g..g+tep, beam beyond
-  A.push(Pr.r(g, yc-hp/2, tep, hp, "plate"));
-  A.push(...beamElevNotched(g+tep, g+tep+Lsec, yc, sec.h, sec.tf, notch, "out"));
-  for(const y of ys) A.push(Pr.l(0, y, g+tep, y, "hidden",{tag:"bolts"}));        // bolt shanks into web
-  A.push(Pr.weld(g+tep, yc+sec.h/2-sec.tf, g+tep+70, yc+sec.h/2+30,{kind:st.weldType,size:st.weldLeg,both:true,text:"typ."}));
-  chainV(A, g+tep, -((prim.b+prim.tw)/2+32+g+tep), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
-  dimV(A, g+tep+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
-  label(A, g+tep+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)",{anchor:"middle",weight:"bold"});
+  out.push(Pr.r(g, yc-hp/2, tep, hp, "plate"));
+  out.push(...beamElevNotched(g+tep, g+tep+Lsec, yc, sec.h, sec.tf, notch, "out"));
+  for(const y of ys) out.push(Pr.l(0, y, g+tep, y, "hidden",{tag:"bolts"}));        // bolt shanks into web
+  out.push(Pr.weld(g+tep, yc+sec.h/2-sec.tf, g+tep+70, yc+sec.h/2+30,{kind:st.weldType,size:st.weldLeg,both:true,text:"typ."}));
+  chainV(out, g+tep, -((prim.b+prim.tw)/2+32+g+tep), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(out, g+tep+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
+  label(out, g+tep+Lsec*0.5, yc+sec.h/2+30, sec.name+"  ("+(opts.tag||"supported")+")",{anchor:"middle",weight:"bold"});
+  label(out, g+tep+8, yc-hp/2-8, [plCallout(tep,bpw,hp,st.grade), bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:13});
+  return out;
+}
 
-  /* View B : MAIN beam ELEVATION + end plate FACE with 2 columns of bolts */
+// End-plate FACE (View B): main beam in elevation + end plate face with two bolt columns.
+function epSection(st, opts){
+  opts = opts||{};
+  const out=[], eg=epGeom(st), {sec,prim,hp,yc,ys,bpw,d0}=eg;
   const half=st.w/2, Lmain=Math.max(bpw+280, 440);
-  B.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out"));
-  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw); B.push(Pr.poly(iS,"hidden")); // supported beam behind plate
-  B.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate"));                                    // end plate face
-  for(const y of ys){ for(const sx of [-half,half]){ B.push(Pr.c(sx,y,d0/2,"bolt",{tag:"bolts"}));
-     B.push(Pr.l(sx-d0*0.35,y,sx+d0*0.35,y,"bolt",{w:0.8})); B.push(Pr.l(sx,y-d0*0.35,sx,y+d0*0.35,"bolt",{w:0.8})); } }
-  dimH(B, yc+hp/2+20, -half, half, 16, String(st.w), "w");
-  chainV(B, -bpw/2, -34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
-  dimV(B, -Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
-  label(B, 0, Math.max(yc+hp/2, prim.h/2)+40, [plCallout(tep,bpw,hp,st.grade), bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:14,anchor:"middle"});
-  label(B, 0, -prim.h/2-12, prim.name+"  (main)",{anchor:"middle",weight:"bold"});
-  return {A,B};
-};
+  out.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out"));
+  if(opts.stiff) out.push(Pr.r(-st.ts, -(prim.h/2-prim.tf), st.ts, prim.h-2*prim.tf, "plate", {dash:"6,4"})); // far stiffener (hidden)
+  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw); out.push(Pr.poly(iS,"hidden")); // supported beam behind plate
+  out.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate"));                                    // end plate face
+  for(const y of ys){ for(const sx of [-half,half]){ out.push(Pr.c(sx,y,d0/2,"bolt",{tag:"bolts"}));
+     out.push(Pr.l(sx-d0*0.35,y,sx+d0*0.35,y,"bolt",{w:0.8})); out.push(Pr.l(sx,y-d0*0.35,sx,y+d0*0.35,"bolt",{w:0.8})); } }
+  dimH(out, yc+hp/2+20, -half, half, 16, String(st.w), "w");
+  chainV(out, -bpw/2, -34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(out, -Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
+  label(out, 0, Math.max(yc+hp/2, prim.h/2)+40, [plCallout(st.tep,bpw,hp,st.grade), bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:14,anchor:"middle"});
+  label(out, 0, -prim.h/2-12, prim.name+"  (main)",{anchor:"middle",weight:"bold"});
+  return out;
+}
+
+GEO["BB-EP"] = function(st){ return bbDoubleSided(st, epElevation, epSection); };
 /* ===== connections/BB-FIN.js =========================================== */
 /* ---------------- BB-FIN : Beam-to-beam fin plate ------------------- */
-GEO["BB-FIN"] = function(st){
-  const A=[], B=[], fg=finGeom(st), {sec,prim,b,la,bp,hp,yc,ys,xs,d0}=fg;
-  const notch = notchAuto(st, sec, prim);
+// One-sided fin-plate ELEVATION: supporting SECTION + supported beam in elevation (bolts as
+// holes). Parameterised by `st`, so it draws either the near beam or the independent far beam.
+// opts.stiff -> add the full-depth far-side stiffener; opts.tag -> beam label suffix.
+function finElevation(st, opts){
+  opts = opts||{};
+  const out=[], fg=finGeom(st), {sec,prim,bp,yc,ys,xs,baseX,ftip,outside,plCy,plH,d0}=fg;
+  const notch = notchAuto(st, sec, prim);            // "none" when outside (no cope)
   const g = st.g, Lsec = Math.max(sec.h*1.0, 360);
-  const bgx = la + (st.n2-1)*st.p2/2;               // bolt group centre x
-  const ftip = (prim.b - prim.tw)/2;                // main beam right flange tip (web right face at x=0)
+  const bgx = xs[0] + (st.n2-1)*st.p2/2;             // bolt group centre x
+  const xb0 = baseX + g;                             // secondary beam end (gap g from reference face)
+  const wleg = Math.max(st.weldLeg, 4);
+  const plTop = plCy + plH/2, plBot = plCy - plH/2;  // fin plate top / bottom edges
+  // "outside" plate is full depth at the support but must be cropped where it overlaps the
+  // supported beam, so it does not foul that beam's flange(s) (per SCI/detailing practice).
+  const topU = yc + sec.h/2 - sec.tf, botU = yc - sec.h/2 + sec.tf;   // supported flange undersides
+  const cropTop = outside ? Math.min(plTop, topU) : plTop;
+  const cropBot = outside ? Math.max(plBot, botU) : plBot;
+  const cropped = outside && (plTop-cropTop>0.5 || cropBot-plBot>0.5);
 
-  /* ----- View A : MAIN beam SECTION + supported beam ELEVATION (bolts = holes) ----- */
   // main/supporting beam shown as a cut I-section, web right face at x=0
   const iP = iSectionPts(-prim.tw/2, 0, prim.h, prim.b, prim.tf, prim.tw);
-  A.push(Pr.hatch(iP,"steel",{edge:false})); A.push(Pr.poly(iP,"out"));
-  label(A, -(prim.b+prim.tw)/2-6, 0, prim.name+"  (main)", {anchor:"middle", rot:-90, weight:"bold"});
-  // fin plate welded to main web, projects right; supported beam frames in
-  A.push(Pr.r(0, yc-hp/2, bp, hp, "plate"));
-  A.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
-  A.push(Pr.weld(0, yc-hp/2+10, ftip+50, yc-hp/2-44, {kind:st.weldType, size:st.weldLeg, both:true, text:"typ."}));
-  A.push(...beamElevNotched(g, g+Lsec, yc, sec.h, sec.tf, notch, "out"));
-  const bg = boltGridElev(bgx, yc, st.n1, st.n2, st.p1, st.p2, d0, "bolts"); A.push(...bg.prims);
-  // dimensions
-  chainV(A, la, -((prim.b+prim.tw)/2 + 32 + la), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
-  dimV(A, g+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
-  dimH(A, yc-sec.h/2-26, 0, g, -20, String(g), "gap");
-  if(st.n2>1) chainH(A, yc+hp/2+22, 18, xs, "p2");
-  if(notch.top){ dimH(A, yc+sec.h/2+18, g, g+notch.top.len, 16, String(notch.top.len), "notch");
-                 dimV(A, g+notch.top.len+8, yc+sec.h/2, yc+sec.h/2-notch.top.dep, 22, String(notch.top.dep), "notch"); }
-  label(A, g+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)", {anchor:"middle", weight:"bold"});
-  label(A, bp+12, yc-hp/2-6, [plCallout(st.tp,bp,hp,st.grade),
-        bCallout(st.n1*st.n2, st.bolt, st.boltGrade, d0)], {lh:14});
+  out.push(Pr.hatch(iP,"steel",{edge:false})); out.push(Pr.poly(iP,"out"));
+  label(out, -(prim.b+prim.tw)/2-6, 0, prim.name+"  (main)", {anchor:"middle", rot:-90, weight:"bold"});
+  if(opts.stiff) farStiffener(out, prim, st.ts, wleg);   // optional full-depth far-side stiffener
 
-  /* ----- View B : MAIN beam ELEVATION + supported beam SECTION + bolt side-views ----- */
+  // fin plate welded to main web (all-around web + both flanges when "outside"), projecting right.
+  // Full depth at the support; cropped past the beam end (x>=xb0) to clear the supported flange(s).
+  if(cropped)
+    out.push(Pr.poly([[0,plTop],[xb0,plTop],[xb0,cropTop],[bp,cropTop],[bp,cropBot],[xb0,cropBot],[xb0,plBot],[0,plBot]],"plate"));
+  else
+    out.push(Pr.r(0, plBot, bp, plH, "plate"));
+  out.push(...weldRun(0, plBot, 0, plTop, wleg, 1));                  // web weld (full plate height)
+  if(outside){
+    out.push(...weldRun(0, plTop, ftip, plTop, wleg, 1));            // top-flange weld
+    out.push(...weldRun(0, plBot, ftip, plBot, wleg, -1));           // bottom-flange weld
+  }
+  out.push(Pr.weld(0, plTop-12, ftip+50, plTop+30, {kind:st.weldType, size:st.weldLeg, both:true, allAround:outside, text:outside?"all round":"typ."}));
+  out.push(...beamElevNotched(xb0, xb0+Lsec, yc, sec.h, sec.tf, notch, "out"));
+  const bg = boltGridElev(bgx, yc, st.n1, st.n2, st.p1, st.p2, d0, "bolts"); out.push(...bg.prims);
+
+  // dimensions
+  chainV(out, xs[0], -((prim.b+prim.tw)/2 + 32 + xs[0]), [cropTop].concat(ys).concat([cropBot]).sort((p,q)=>q-p), "p1");
+  dimV(out, xb0+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
+  dimH(out, yc-sec.h/2-26, baseX, baseX+g, -20, String(g), "gap");
+  if(outside) dimH(out, plTop+22, 0, ftip, 18, String(Math.round(ftip)), "proj"); // plate cantilever over the flange
+  if(st.n2>1) chainH(out, plTop+(outside?40:22), 18, xs, "p2");
+  if(notch.top){ dimH(out, yc+sec.h/2+18, xb0, xb0+notch.top.len, 16, String(notch.top.len), "notch");
+                 dimV(out, xb0+notch.top.len+8, yc+sec.h/2, yc+sec.h/2-notch.top.dep, 22, String(notch.top.dep), "notch"); }
+  label(out, xb0+Lsec*0.5, yc+sec.h/2+30, sec.name+"  ("+(opts.tag||"supported")+")", {anchor:"middle", weight:"bold"});
+  label(out, bp+12, plBot-6, [plCallout(st.tp,bp,plH,st.grade)+(outside?(cropped?"  (welded all round; cropped to clear flange)":"  (welded all round)"):""),
+        bCallout(st.n1*st.n2, st.bolt, st.boltGrade, d0)], {lh:14});
+  return out;
+}
+
+// SECTION: supporting beam in elevation + supported beam cut as a cross-section + bolt side-views.
+// opts.stiff -> show the far-side stiffener (hidden, behind the web).
+function finSection(st, opts){
+  opts = opts||{};
+  const out=[], fg=finGeom(st), {sec,prim,b,yc,ys,outside,plCy,plH,pyHalf}=fg;
+  const wleg = Math.max(st.weldLeg, 4);
+  const plTop = plCy + plH/2, plBot = plCy - plH/2;
   const scx = st.tp + sec.tw/2;
   const Lmain = Math.max(sec.b + 300, 440);
-  B.push(...beamElevBreak(scx, Lmain, 0, prim.h, prim.tf, "out"));     // main beam in elevation (broken segment)
-  // fin plate seen edge-on at main web near face
-  B.push(Pr.hatch([[0,yc-hp/2],[st.tp,yc-hp/2],[st.tp,yc+hp/2],[0,yc+hp/2]],"steel",{edge:false}));
-  B.push(Pr.r(0, yc-hp/2, st.tp, hp, "plate"));
-  B.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
+  out.push(...beamElevBreak(scx, Lmain, 0, prim.h, prim.tf, "out"));     // main beam in elevation (broken segment)
+  // optional full-depth stiffener on the far face (behind the web in this view), flange to flange
+  if(opts.stiff) out.push(Pr.r(-st.ts, -pyHalf, st.ts, 2*pyHalf, "plate", {dash:"6,4"}));
+  // fin plate seen edge-on at main web near face (full depth + all-around weld when outside)
+  out.push(Pr.hatch([[0,plBot],[st.tp,plBot],[st.tp,plTop],[0,plTop]],"steel",{edge:false}));
+  out.push(Pr.r(0, plBot, st.tp, plH, "plate"));
+  out.push(...weldRun(0, plBot, 0, plTop, wleg, 1));                  // web weld
+  if(outside){
+    out.push(...weldRun(0, plTop, st.tp, plTop, wleg, 1));           // top-flange weld (section)
+    out.push(...weldRun(0, plBot, st.tp, plBot, wleg, -1));          // bottom-flange weld (section)
+  }
   // supported beam SECTION (cut) — masks the main beam behind it, hatched, bold outline
   const iS = iSectionPts(scx, yc, sec.h, sec.b, sec.tf, sec.tw);
-  B.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));      // white mask over main beam
-  B.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));  // section hatch (on top of mask)
-  B.push(Pr.poly(iS,"out",{w:1.9}));                         // bold cut outline
-  for(const y of ys) B.push(...boltSide(0, y, st.tp+sec.tw, "left", b.d, b.washer));
+  out.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));      // white mask over main beam
+  out.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));  // section hatch (on top of mask)
+  out.push(Pr.poly(iS,"out",{w:1.9}));                         // bold cut outline
+  for(const y of ys) out.push(...boltSide(0, y, st.tp+sec.tw, "left", b.d, b.washer));
   // dims
-  if(st.n1>1) chainV(B, scx, sec.b/2+34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
-  dimV(B, scx-Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
-  B.push(Pr.weld(0, yc-hp/2+10, st.tp+60, yc-hp/2-40, {kind:st.weldType, size:st.weldLeg, both:true, text:"typ."}));
-  label(B, scx, prim.h/2+34, prim.name+"  (main)", {anchor:"middle", weight:"bold"});
-  label(B, scx, prim.h/2+16, sec.name+"  (supported)", {anchor:"middle", size:10});
-  return {A,B};
-};
+  if(st.n1>1) chainV(out, scx, sec.b/2+34, [plTop].concat(ys).concat([plBot]).sort((p,q)=>q-p), "p1");
+  dimV(out, scx-Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
+  out.push(Pr.weld(0, plBot+10, st.tp+60, plBot-30, {kind:st.weldType, size:st.weldLeg, both:true, allAround:outside, text:outside?"all round":"typ."}));
+  label(out, scx, prim.h/2+34, prim.name+"  (main)", {anchor:"middle", weight:"bold"});
+  label(out, scx, prim.h/2+16, sec.name+"  (supported)", {anchor:"middle", size:10});
+  return out;
+}
+
+GEO["BB-FIN"] = function(st){ return bbDoubleSided(st, finElevation, finSection); };
 /* ===== connections/BB-W.js ============================================= */
 /* ---------------- BB-W : Beam-to-beam direct welded ----------------- */
-GEO["BB-W"] = function(st){
-  const A=[], B=[], {sec,prim}=members();
+// Direct-welded ELEVATION (supporting SECTION + supported beam welded in elevation),
+// parameterised by `st` so it draws either the near beam or the independent far beam.
+function wElevation(st, opts){
+  opts = opts||{};
+  const out=[], {sec,prim}=members(st);
   const notch=notchAuto(st,sec,prim), Lsec=Math.max(sec.h*1.0,360);
   const yc=alignYc(st.align||"top",prim,sec), fkind=st.weldType, top=yc+sec.h/2, bot=yc-sec.h/2;
-  const ftip=(prim.b-prim.tw)/2;
-
-  /* View A : MAIN beam SECTION + supported beam ELEVATION (welded) */
+  const ftip=(prim.b-prim.tw)/2, wleg=Math.max(st.weldLeg,4);
   const iP=iSectionPts(-prim.tw/2,0,prim.h,prim.b,prim.tf,prim.tw);
-  A.push(Pr.hatch(iP,"steel",{edge:false})); A.push(Pr.poly(iP,"out"));
-  label(A,-(prim.b+prim.tw)/2-6,0,prim.name+"  (main)",{anchor:"middle",rot:-90,weight:"bold"});
-  A.push(...beamElevNotched(0, Lsec, yc, sec.h, sec.tf, notch, "out"));
-  A.push(Pr.weld(0, top-sec.tf/2, ftip+40, top+34,{kind:fkind,size:st.weldLeg,both:false,text:"flange"}));
-  A.push(Pr.weld(0, bot+sec.tf/2, ftip+40, bot-34,{kind:fkind,size:st.weldLeg,both:false,text:"flange"}));
-  A.push(Pr.weld(0, yc, 90, yc+60,{kind:"fillet",size:st.weldLeg,both:true,text:"web"}));
-  A.push(...weldRun(0,bot+sec.tf,0,top-sec.tf,Math.max(st.weldLeg,4),1));
-  dimV(A,Lsec,bot,top,34,String(Math.round(sec.h)));
-  label(A,Lsec*0.5,top+30,sec.name+"  (welded)",{anchor:"middle",weight:"bold"});
+  out.push(Pr.hatch(iP,"steel",{edge:false})); out.push(Pr.poly(iP,"out"));
+  label(out,-(prim.b+prim.tw)/2-6,0,prim.name+"  (main)",{anchor:"middle",rot:-90,weight:"bold"});
+  if(opts.stiff) farStiffener(out, prim, st.ts, wleg);    // optional full-depth far-side stiffener
+  out.push(...beamElevNotched(0, Lsec, yc, sec.h, sec.tf, notch, "out"));
+  out.push(Pr.weld(0, top-sec.tf/2, ftip+40, top+34,{kind:fkind,size:st.weldLeg,both:false,text:"flange"}));
+  out.push(Pr.weld(0, bot+sec.tf/2, ftip+40, bot-34,{kind:fkind,size:st.weldLeg,both:false,text:"flange"}));
+  out.push(Pr.weld(0, yc, 90, yc+60,{kind:"fillet",size:st.weldLeg,both:true,text:"web"}));
+  out.push(...weldRun(0,bot+sec.tf,0,top-sec.tf,wleg,1));
+  dimV(out,Lsec,bot,top,34,String(Math.round(sec.h)));
+  label(out,Lsec*0.5,top+30,sec.name+"  ("+(opts.tag||"welded")+")",{anchor:"middle",weight:"bold"});
+  return out;
+}
 
-  /* View B : MAIN beam ELEVATION + supported beam SECTION + stiffeners */
+// Direct-welded SECTION (View B): main beam in elevation + supported beam cut + web stiffeners.
+function wSection(st, opts){
+  opts = opts||{};
+  const out=[], {sec,prim}=members(st);
+  const yc=alignYc(st.align||"top",prim,sec), fkind=st.weldType, top=yc+sec.h/2, bot=yc-sec.h/2;
   const scx=sec.tw/2, Lmain=Math.max(sec.b+320, 460);
-  B.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out"));
-  // stiffeners on the main web aligned to supported beam flanges (pair)
+  out.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out"));
+  // transverse stiffeners on the main web aligned to the supported beam flanges (pair)
   if(st.ts>0){ for(const yy of [yc+sec.h/2-sec.tf/2, yc-sec.h/2+sec.tf/2])
-      B.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
-    label(B,scx-Lmain*0.36-6, yc, "stiff "+st.ts, {anchor:"middle",rot:-90,size:9}); }
+      out.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
+    label(out,scx-Lmain*0.36-6, yc, "stiff "+st.ts, {anchor:"middle",rot:-90,size:9}); }
   const iS=iSectionPts(scx,yc,sec.h,sec.b,sec.tf,sec.tw);
-  B.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));
-  B.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));
-  B.push(Pr.poly(iS,"out",{w:1.9}));
-  B.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
-  B.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
-  dimV(B,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
-  dimV(B,scx-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
-  label(B,scx,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});
-  return {A,B};
-};
+  out.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));
+  out.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));
+  out.push(Pr.poly(iS,"out",{w:1.9}));
+  out.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
+  out.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
+  dimV(out,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
+  dimV(out,scx-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
+  label(out,scx,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});
+  return out;
+}
+
+GEO["BB-W"] = function(st){ return bbDoubleSided(st, wElevation, wSection); };
 /* ===== connections/BC-EP.js ============================================ */
 /* ---------------- BC-EP : Beam to column, end plate ----------------- */
 GEO["BC-EP"] = function(st){
@@ -1188,6 +1345,22 @@ function validate(st){
     // §6.3 SSSS buildability (warn)
     if(fin && st.tp > 0.5*bd) add("warn","W-DUCT",`tₚ = ${st.tp} > 0.5·d_bolt = ${0.5*bd}; verify ductility per SSSS §2.1.3`,["tp"]);
     if(fin && st.weldLeg < 0.8*st.tp) add("warn","W-WELDLEG",`fin weld s = ${st.weldLeg} < 0.8·tₚ = ${(0.8*st.tp).toFixed(1)} (plate must yield first)`,["weld"]);
+    if(fin && st.conn==="BB-FIN" && st.finPos==="outside"){
+      const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*bd);
+      const lever = Math.round((prim.b-prim.tw)/2 + la + (st.n2-1)*st.p2/2);   // support face → bolt group
+      add("warn","W-FINEXT",`outside (extended) fin plate, welded all-round to web + both flanges: lever arm support → bolt group ≈ ${lever} mm — verify per SSSS (long fin plate)`,["tp","bp"]);
+    }
+    // far beam (side 2): EC3-1-8 minima + fit-up on the independent far connection (BB-FIN/EP)
+    if(st.beam2 && (st.conn==="BB-FIN"||st.conn==="BB-EP")){
+      const stB=farBeamState(st), d0B=holeDia(stB), secB=members(stB).sec;
+      if(st.e1B < 1.2*d0B) add("error","E-E1MIN-F",`far beam e₁ = ${st.e1B} < 1.2·d₀ = ${(1.2*d0B).toFixed(1)}`,["e1B"]);
+      if(st.p1B < 2.2*d0B) add("error","E-P1MIN-F",`far beam p₁ = ${st.p1B} < 2.2·d₀ = ${(2.2*d0B).toFixed(1)}`,["p1B"]);
+      if(fin && st.n2B>1 && st.p2B < 2.4*d0B) add("error","E-P2MIN-F",`far beam p₂ = ${st.p2B} < 2.4·d₀ = ${(2.4*d0B).toFixed(1)}`,["p2B"]);
+      if(ep && st.wB < 2.4*d0B) add("error","E-WMIN-F",`far beam w = ${st.wB} < 2.4·d₀ = ${(2.4*d0B).toFixed(1)}`,["wB"]);
+      const dzB=clearDepth(secB), grpB=(st.n1B-1)*st.p1B + 2*st.e1B;
+      if(grpB > dzB+1) add("error","E-FITDEPTH-F",`far beam bolt group ${Math.round(grpB)} exceeds clear web depth ${Math.round(dzB)} of ${secB.name}`,["p1B"]);
+      if(fin && st.weldLegB < 0.8*st.tpB) add("warn","W-WELDLEG-F",`far weld s = ${st.weldLegB} < 0.8·tₚ = ${(0.8*st.tpB).toFixed(1)} (plate must yield first)`,["weldB"]);
+    }
     if(active("g") && st.g < 10) add("warn","W-GAPMIN",`gap g = ${st.g} < 10 mm recommended (SSSS)`,["gap"]);
     if(st.n1 < 2) add("warn","W-NMIN","minimum 2 bolt rows recommended",["bolts"]);
     if(ep){ const bpw=st.w+2*Math.max(st.e2,1.5*bd);
@@ -1199,6 +1372,7 @@ function validate(st){
     if(hefVal() < 8*d) add("warn","W-HEFMIN",`hₑf = ${hefVal()} < 8·d = ${8*d} — shallow embedment`,["hef"]);
   }
   if(active("weldLeg") && st.weldLeg < 4) add("error","E-WELDMIN",`fillet leg ${st.weldLeg} < 4 mm`,["weld"]);
+  if(st.conn.startsWith("BB") && st.beam2 && st.weldLegB < 4) add("error","E-WELDMIN-F",`far weld leg ${st.weldLegB} < 4 mm`,["weldB"]);
   if(!out.length) add("ok","OK","All detailing checks pass.",[]);
   return out;
 }
@@ -1212,6 +1386,7 @@ function fitScale(prims, svg){ const W=svg.clientWidth||880,H=560,pad=28,bb=bbox
 function memberSummary(){ const {sec,prim}=members(), c=state.conn;
   if(c.startsWith("CCON")) return prim.name+" → concrete";
   if(c.startsWith("BCON")) return sec.name+" → concrete";
+  if(c.startsWith("BB") && state.beam2){ const f=members(farBeamState(state)).sec; return sec.name+" + "+f.name+" → "+prim.name; }
   return sec.name+" → "+prim.name; }
 
 function redraw(){
@@ -1233,8 +1408,9 @@ function redraw(){
       const W=svg.clientWidth||880; svg.style.width=(W*MM_PER_PX).toFixed(1)+"mm"; svg.style.height=(560*MM_PER_PX).toFixed(1)+"mm"; }
   } else { svgA.style.width=svgA.style.height=""; svgB.style.width=svgB.style.height=""; }
   const cd=CONN[state.conn], ms=memberSummary();
+  const vBcap = (state.conn.startsWith("BB") && state.beam2) ? "Elevation (far beam)" : cd.vB;
   document.getElementById("capA").textContent=cd.vA+" — "+ms;
-  document.getElementById("capB").textContent=cd.vB+" — "+ms;
+  document.getElementById("capB").textContent=vBcap+" — "+ms;
   document.getElementById("scaleA").textContent=showA?ratioLabel(scale,forced):"";
   document.getElementById("scaleB").textContent=showB?ratioLabel(scale,forced):"";
   const today=new Date().toISOString().slice(0,10);
@@ -1269,8 +1445,10 @@ function renderParamTable(){
   rows.push(["Members", memberSummary()]);
   rows.push(["Steel grade", state.grade]);
   for(const k of (SCHEMA[state.conn]||[])){ const c=CONTROLS[k]; if(!c||c.hidden) continue;
-    let v=state[k]; if(k==="hp"&&v==0)v="auto"; if((k==="bp"||k==="Bp"||k==="Lp"||k==="hef"||k==="sa1"||k==="sa2"||k==="stiffHeight")&&v==0)v="auto";
-    if(k==="secSec"||k==="primSec"){ v=resolveSec(v,state[k==="secSec"?"secCustom":"primCustom"]).name; }
+    if(c.group===G.FAR && !state.beam2) continue;
+    if(k==="ts" && !state.farStiff && (state.conn==="BB-FIN"||state.conn==="BB-EP")) continue;
+    let v=state[k]; if((k==="hp"||k==="hpB")&&v==0)v="auto"; if((k==="bp"||k==="bpB"||k==="Bp"||k==="Lp"||k==="hef"||k==="sa1"||k==="sa2"||k==="stiffHeight")&&v==0)v="auto";
+    if(k==="secSec"||k==="primSec"||k==="secSecB"){ const ck=k==="secSec"?"secCustom":k==="secSecB"?"secCustomB":"primCustom"; v=resolveSec(v,state[ck]).name; }
     rows.push([c.label, v]); }
   // derived
   if(state.conn.endsWith("FIN")||state.conn.endsWith("EP")) rows.push(["Hole d₀ (derived)", holeDia()+" mm"]);
@@ -1310,7 +1488,7 @@ function numField(key){
 }
 function enumField(key){ const c=CONTROLS[key], s=el("select");
   for(const o of c.opts){ const op=el("option",{value:o,text:o},s); if(state[key]==o)op.selected=true; }
-  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType")buildPanel(); redraw(); }; return s; }
+  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType"||key==="finPos")buildPanel(); redraw(); }; return s; }
 function boolField(key){ const lab=el("label",{class:"chk"}); const cb=el("input",{type:"checkbox"},lab); cb.checked=!!state[key];
   cb.onchange=()=>{ state[key]=cb.checked; buildPanel(); redraw(); }; lab.appendChild(document.createTextNode(" on")); return lab; }
 function sectionField(key){
@@ -1320,7 +1498,7 @@ function sectionField(key){
   inp.onchange=()=>{ state[key]=inp.value.trim().toUpperCase(); buildPanel(); redraw(); };
   inp.oninput=()=>{ state[key]=inp.value.trim().toUpperCase(); redrawD(); };
   if(state[key]==="CUSTOM"){
-    const ck=key==="secSec"?"secCustom":"primCustom", cv=state[ck];
+    const ck=key==="secSec"?"secCustom":key==="secSecB"?"secCustomB":"primCustom", cv=state[ck];
     const grid=el("div",{class:"fld full",style:"display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px"},frag);
     for(const f of ["h","b","tf","tw","r"]){ const w=el("div",{},grid); el("label",{text:f,style:"font-size:10px"},w);
       const ii=el("input",{type:"number",value:cv[f],step:f==="r"?0.5:1,style:"width:100%"},w);
@@ -1348,6 +1526,10 @@ function buildPanel(){
       // conditional visibility
       if(k==="doublerT" && !state.doubler) continue;
       if(k==="wallT" && state.concType!=="wall") continue;
+      if((k==="notchMode"||k==="notchLen"||k==="notchDep"||k==="hp") && state.conn==="BB-FIN" && state.finPos==="outside") continue;
+      if(c.group===G.FAR && !state.beam2) continue;                               // far-beam controls only when 2nd beam on
+      if(k==="ts" && !state.farStiff && (state.conn==="BB-FIN"||state.conn==="BB-EP")) continue; // stiffener thk only when far stiffener on (BB-W has its own ts)
+      if((k==="notchModeB"||k==="hpB") && state.conn==="BB-FIN" && state.finPosB==="outside") continue;  // outside far plate: no cope / auto depth
       if((k==="sa1"||k==="sa2")) {/* keep */}
       const f=el("div",{class:"fld"+(c.type==="section"?" full":"")},body);
       const lab=el("label",{},f); lab.textContent=c.label; if(c.hint){ const ic=el("span",{class:"ico",title:c.hint,text:" ⓘ"}); lab.appendChild(ic); }

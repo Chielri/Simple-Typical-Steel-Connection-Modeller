@@ -7,6 +7,7 @@ function fitScale(prims, svg){ const W=svg.clientWidth||880,H=560,pad=28,bb=bbox
 function memberSummary(){ const {sec,prim}=members(), c=state.conn;
   if(c.startsWith("CCON")) return prim.name+" → concrete";
   if(c.startsWith("BCON")) return sec.name+" → concrete";
+  if(c.startsWith("BB") && state.beam2){ const f=members(farBeamState(state)).sec; return sec.name+" + "+f.name+" → "+prim.name; }
   return sec.name+" → "+prim.name; }
 
 function redraw(){
@@ -28,8 +29,9 @@ function redraw(){
       const W=svg.clientWidth||880; svg.style.width=(W*MM_PER_PX).toFixed(1)+"mm"; svg.style.height=(560*MM_PER_PX).toFixed(1)+"mm"; }
   } else { svgA.style.width=svgA.style.height=""; svgB.style.width=svgB.style.height=""; }
   const cd=CONN[state.conn], ms=memberSummary();
+  const vBcap = (state.conn.startsWith("BB") && state.beam2) ? "Elevation (far beam)" : cd.vB;
   document.getElementById("capA").textContent=cd.vA+" — "+ms;
-  document.getElementById("capB").textContent=cd.vB+" — "+ms;
+  document.getElementById("capB").textContent=vBcap+" — "+ms;
   document.getElementById("scaleA").textContent=showA?ratioLabel(scale,forced):"";
   document.getElementById("scaleB").textContent=showB?ratioLabel(scale,forced):"";
   const today=new Date().toISOString().slice(0,10);
@@ -64,8 +66,10 @@ function renderParamTable(){
   rows.push(["Members", memberSummary()]);
   rows.push(["Steel grade", state.grade]);
   for(const k of (SCHEMA[state.conn]||[])){ const c=CONTROLS[k]; if(!c||c.hidden) continue;
-    let v=state[k]; if(k==="hp"&&v==0)v="auto"; if((k==="bp"||k==="Bp"||k==="Lp"||k==="hef"||k==="sa1"||k==="sa2"||k==="stiffHeight")&&v==0)v="auto";
-    if(k==="secSec"||k==="primSec"){ v=resolveSec(v,state[k==="secSec"?"secCustom":"primCustom"]).name; }
+    if(c.group===G.FAR && !state.beam2) continue;
+    if(k==="ts" && !state.farStiff && (state.conn==="BB-FIN"||state.conn==="BB-EP")) continue;
+    let v=state[k]; if((k==="hp"||k==="hpB")&&v==0)v="auto"; if((k==="bp"||k==="bpB"||k==="Bp"||k==="Lp"||k==="hef"||k==="sa1"||k==="sa2"||k==="stiffHeight")&&v==0)v="auto";
+    if(k==="secSec"||k==="primSec"||k==="secSecB"){ const ck=k==="secSec"?"secCustom":k==="secSecB"?"secCustomB":"primCustom"; v=resolveSec(v,state[ck]).name; }
     rows.push([c.label, v]); }
   // derived
   if(state.conn.endsWith("FIN")||state.conn.endsWith("EP")) rows.push(["Hole d₀ (derived)", holeDia()+" mm"]);

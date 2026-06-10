@@ -36,6 +36,34 @@ the **main/supporting beam as a cut cross-section** with the supported beam in
 `Beam alignment` control (top / centre / bottom) drives the framing offset and the
 auto-notch (top = tops flush → coped; centre = mid-aligned, no cope if it fits).
 
+`BB-FIN` also has a **`Fin plate position`** control:
+- `between` (default) — the secondary beam frames *inside* the supporting flanges and is
+  auto-coped where the flanges clash (the standard arrangement).
+- `outside` — an **extended fin plate** that fills the clear depth between the supporting
+  flanges and is **fillet-welded all-around** (to the web *and* both flange undersides),
+  cantilevering *past the supporting flange tip* to the bolts. The secondary beam stays clear
+  of the flanges (gap `g` measured from the flange tip) so **no cope** is needed — used when
+  the members are equal/near-equal depth (e.g. `SB4→SB4`, `SB4→SB3`), where framing between
+  the flanges would force an impractical double cope. A shallower secondary beam bolts to the
+  upper part of the plate; where the plate overlaps that beam it is **cropped to clear the
+  supported beam's flange(s)** (full-depth stiffener at the support, trimmed at the beam — per
+  SCI detailing practice), with the full-depth portion visible at the support. The cope +
+  plate-height controls hide in this mode and a `W-FINEXT` advisory flags the longer lever arm
+  (SSSS long fin plate).
+
+All three beam-to-beam connections (`BB-FIN`, `BB-EP`, `BB-W`) have two further toggles for
+**double-sided** framing:
+- **`Beam on far side`** — adds an *independent* secondary beam (its own `Far beam (side 2)`
+  control group: section, alignment, plate/bolts/weld as appropriate to the connection) framing
+  into the opposite face of the supporting web. **View B switches from the section to that
+  beam's elevation, mirrored** to the opposite hand, so the two panels read as a beam on each
+  side of the girder (each fully dimensioned; the far beam is validated with `…-F` codes). The
+  supporting member is shared.
+- **`Far-side stiffener plate`** — adds a **full-depth stiffener** on the opposite web face
+  (flange to flange, fitted to the flange tip), fillet-welded all-round to the web and both
+  flanges, to balance the single-sided connection force. Shown in the near elevation and (as a
+  hidden outline) in the section.
+
 | Family | IDs |
 |---|---|
 | Beam → Beam | `BB-FIN` fin plate · `BB-EP` end plate · `BB-W` direct welded |

@@ -86,6 +86,7 @@ function drawWeld(g,p,T){
   const rx=ex+side*refLen;
   svgel("line",{x1:x,y1:y,x2:ex,y2:ey,stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g);
   svgel("line",{x1:ex,y1:ey,x2:rx,y2:ey,stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g);
+  if(p.allAround) svgel("circle",{cx:ex,cy:ey,r:4.5,fill:"none",stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g); // weld-all-around flag
   const sym=ex+side*10;
   if(p.kind==="fillet"){
     svgel("polygon",{points:`${sym},${ey} ${sym+side*9},${ey} ${sym},${ey-9}`,fill:col},g); // arrow-side flag (above)

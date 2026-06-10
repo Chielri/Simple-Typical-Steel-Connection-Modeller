@@ -27,6 +27,22 @@ function validate(st){
     // §6.3 SSSS buildability (warn)
     if(fin && st.tp > 0.5*bd) add("warn","W-DUCT",`tₚ = ${st.tp} > 0.5·d_bolt = ${0.5*bd}; verify ductility per SSSS §2.1.3`,["tp"]);
     if(fin && st.weldLeg < 0.8*st.tp) add("warn","W-WELDLEG",`fin weld s = ${st.weldLeg} < 0.8·tₚ = ${(0.8*st.tp).toFixed(1)} (plate must yield first)`,["weld"]);
+    if(fin && st.conn==="BB-FIN" && st.finPos==="outside"){
+      const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*bd);
+      const lever = Math.round((prim.b-prim.tw)/2 + la + (st.n2-1)*st.p2/2);   // support face → bolt group
+      add("warn","W-FINEXT",`outside (extended) fin plate, welded all-round to web + both flanges: lever arm support → bolt group ≈ ${lever} mm — verify per SSSS (long fin plate)`,["tp","bp"]);
+    }
+    // far beam (side 2): EC3-1-8 minima + fit-up on the independent far connection (BB-FIN/EP)
+    if(st.beam2 && (st.conn==="BB-FIN"||st.conn==="BB-EP")){
+      const stB=farBeamState(st), d0B=holeDia(stB), secB=members(stB).sec;
+      if(st.e1B < 1.2*d0B) add("error","E-E1MIN-F",`far beam e₁ = ${st.e1B} < 1.2·d₀ = ${(1.2*d0B).toFixed(1)}`,["e1B"]);
+      if(st.p1B < 2.2*d0B) add("error","E-P1MIN-F",`far beam p₁ = ${st.p1B} < 2.2·d₀ = ${(2.2*d0B).toFixed(1)}`,["p1B"]);
+      if(fin && st.n2B>1 && st.p2B < 2.4*d0B) add("error","E-P2MIN-F",`far beam p₂ = ${st.p2B} < 2.4·d₀ = ${(2.4*d0B).toFixed(1)}`,["p2B"]);
+      if(ep && st.wB < 2.4*d0B) add("error","E-WMIN-F",`far beam w = ${st.wB} < 2.4·d₀ = ${(2.4*d0B).toFixed(1)}`,["wB"]);
+      const dzB=clearDepth(secB), grpB=(st.n1B-1)*st.p1B + 2*st.e1B;
+      if(grpB > dzB+1) add("error","E-FITDEPTH-F",`far beam bolt group ${Math.round(grpB)} exceeds clear web depth ${Math.round(dzB)} of ${secB.name}`,["p1B"]);
+      if(fin && st.weldLegB < 0.8*st.tpB) add("warn","W-WELDLEG-F",`far weld s = ${st.weldLegB} < 0.8·tₚ = ${(0.8*st.tpB).toFixed(1)} (plate must yield first)`,["weldB"]);
+    }
     if(active("g") && st.g < 10) add("warn","W-GAPMIN",`gap g = ${st.g} < 10 mm recommended (SSSS)`,["gap"]);
     if(st.n1 < 2) add("warn","W-NMIN","minimum 2 bolt rows recommended",["bolts"]);
     if(ep){ const bpw=st.w+2*Math.max(st.e2,1.5*bd);
@@ -38,6 +54,7 @@ function validate(st){
     if(hefVal() < 8*d) add("warn","W-HEFMIN",`hₑf = ${hefVal()} < 8·d = ${8*d} — shallow embedment`,["hef"]);
   }
   if(active("weldLeg") && st.weldLeg < 4) add("error","E-WELDMIN",`fillet leg ${st.weldLeg} < 4 mm`,["weld"]);
+  if(st.conn.startsWith("BB") && st.beam2 && st.weldLegB < 4) add("error","E-WELDMIN-F",`far weld leg ${st.weldLegB} < 4 mm`,["weldB"]);
   if(!out.length) add("ok","OK","All detailing checks pass.",[]);
   return out;
 }
