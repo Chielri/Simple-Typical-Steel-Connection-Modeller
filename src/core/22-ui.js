@@ -67,11 +67,9 @@ function buildPanel(){
       if(k==="doublerT" && !state.doubler) continue;
       if(k==="wallT" && state.concType!=="wall") continue;
       if((k==="notchMode"||k==="notchLen"||k==="notchDep"||k==="hp") && state.conn==="BB-FIN" && state.finPos==="outside") continue;
-      if(state.conn==="BB-FIN"){
-        if(c.group===G.FAR && !state.beam2) continue;                       // far-beam controls only when 2nd beam on
-        if(k==="ts" && !state.farStiff) continue;                           // stiffener thk only when far stiffener on
-        if((k==="notchModeB"||k==="hpB") && state.finPosB==="outside") continue;  // outside far plate: no cope / auto depth
-      }
+      if(c.group===G.FAR && !state.beam2) continue;                               // far-beam controls only when 2nd beam on
+      if(k==="ts" && !state.farStiff && (state.conn==="BB-FIN"||state.conn==="BB-EP")) continue; // stiffener thk only when far stiffener on (BB-W has its own ts)
+      if((k==="notchModeB"||k==="hpB") && state.conn==="BB-FIN" && state.finPosB==="outside") continue;  // outside far plate: no cope / auto depth
       if((k==="sa1"||k==="sa2")) {/* keep */}
       const f=el("div",{class:"fld"+(c.type==="section"?" full":"")},body);
       const lab=el("label",{},f); lab.textContent=c.label; if(c.hint){ const ic=el("span",{class:"ico",title:c.hint,text:" ⓘ"}); lab.appendChild(ic); }

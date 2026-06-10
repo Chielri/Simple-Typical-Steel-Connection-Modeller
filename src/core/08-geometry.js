@@ -46,12 +46,12 @@ function finGeom(st){
   return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, plCy, plH, pyHalf, d0:holeDia(st)};
 }
 function epGeom(st){
-  const {sec,prim}=members(), b=boltProps();
+  const {sec,prim}=members(st), b=boltProps(st);
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
   const yc = alignYc(st.align||"top", prim, sec);
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
   const bpw = st.w + 2*Math.max(st.e2, 1.5*b.d);       // end-plate width
-  return {sec, prim, b, hp, yc, ys, bpw, d0:holeDia()};
+  return {sec, prim, b, hp, yc, ys, bpw, d0:holeDia(st)};
 }
 
 /* small builder utilities (mm) */
@@ -161,6 +161,57 @@ function bconCommon(st){
   const Lp = st.Lp>0 ? st.Lp : Math.round(sec.h+120);
   const Bp = st.Bp>0 ? st.Bp : Math.round(sec.b+120);
   return {sec,d,hef,concT,Lp,Bp};
+}
+
+/* =====================================================================
+   Double-sided BB framing — shared by BB-FIN / BB-EP / BB-W.
+   A second supported beam (independent "…B" controls) frames into the far
+   face of the supporting web; View B becomes its (mirrored) elevation. An
+   optional full-depth stiffener can be added on the far web face.
+   ===================================================================== */
+// Map the independent far-beam controls (…B) onto a standard state. Supporting member shared.
+function farBeamState(st){
+  return Object.assign({}, st, {
+    secSec:st.secSecB, secCustom:st.secCustomB,
+    align:st.alignB, finPos:st.finPosB, notchMode:st.notchModeB, notchLen:0, notchDep:0,
+    tp:st.tpB, hp:st.hpB, bp:st.bpB, g:st.gB, tep:st.tepB, w:st.wB,
+    bolt:st.boltB, boltGrade:st.boltGradeB, n1:st.n1B, n2:st.n2B,
+    p1:st.p1B, p2:st.p2B, e1:st.e1B, e2:st.e2B, hole:st.holeB,
+    weldType:st.weldTypeB, weldLeg:st.weldLegB,
+  });
+}
+// Horizontally mirror an elevation (about x=0): negate x; flip arc sweep, vertical-dim
+// offsets, weld leaders, and start/end text anchors (text stays upright/left-to-right).
+function mirrorX(prims){
+  return prims.map(p=>{
+    const q=Object.assign({},p);
+    if(p.t==="l") q.a=[-p.a[0],p.a[1],-p.a[2],p.a[3]];
+    else if(p.t==="r") q.x=-(p.x+p.w);
+    else if(p.t==="c") q.cx=-p.cx;
+    else if(p.t==="p"||p.t==="h") q.pts=p.pts.map(z=>[-z[0],z[1]]);
+    else if(p.t==="pa") q.segs=p.segs.map(s=> s[0]==="A"?["A",s[1],-s[2],s[3],!s[4]] : s[0]==="Z"?s : [s[0],-s[1],s[2]]);
+    else if(p.t==="t"){ q.x=-p.x; if(p.anchor==="start")q.anchor="end"; else if(p.anchor==="end")q.anchor="start"; }
+    else if(p.t==="d"){ q.x1=-p.x1; q.x2=-p.x2; if(p.dir==="v")q.off=-(p.off||0); }
+    else if(p.t==="w"){ q.x=-p.x; q.lx=-p.lx; }
+    return q;
+  });
+}
+// Full-depth stiffener on the far web face: flange to flange, fitted to the flange tip,
+// fillet-welded all-round (far web face + both flange undersides).
+function farStiffener(out, prim, ts, wleg){
+  const sTop=prim.h/2-prim.tf, sBot=-(prim.h/2-prim.tf), xWeb=-prim.tw, xTip=-(prim.b+prim.tw)/2;
+  out.push(Pr.r(xTip, sBot, xWeb-xTip, sTop-sBot, "plate"));
+  out.push(...weldRun(xWeb, sBot, xWeb, sTop, wleg, -1));   // far web-face weld
+  out.push(...weldRun(xTip, sTop, xWeb, sTop, wleg, 1));    // top-flange weld
+  out.push(...weldRun(xTip, sBot, xWeb, sBot, wleg, -1));   // bottom-flange weld
+  label(out, xTip, sTop+14, "stiffener PL "+Math.round(ts)+" — full depth, welded all round", {anchor:"start", size:10});
+}
+// Compose the two BB views: A = near elevation (+ far stiffener); B = mirrored far-beam
+// elevation when a far beam is enabled, otherwise the connection's own section view.
+function bbDoubleSided(st, elevFn, sectFn){
+  const A = elevFn(st, {stiff: st.farStiff, tag: st.beam2 ? "near, side 1" : "supported"});
+  const B = st.beam2 ? mirrorX(elevFn(farBeamState(st), {tag:"far, side 2"})) : sectFn(st, {stiff: st.farStiff});
+  return {A, B};
 }
 
 /* =====================================================================

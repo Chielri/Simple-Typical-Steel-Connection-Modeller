@@ -1,23 +1,10 @@
 /* ---------------- BB-FIN : Beam-to-beam fin plate ------------------- */
-// Map the independent "far beam" controls (…B keys) onto a standard state so the
-// shared fin-plate geometry can draw the second connection. Supporting member shared.
-function farBeamState(st){
-  return Object.assign({}, st, {
-    secSec:st.secSecB, secCustom:st.secCustomB,
-    align:st.alignB, finPos:st.finPosB, notchMode:st.notchModeB, notchLen:0, notchDep:0,
-    tp:st.tpB, hp:st.hpB, bp:st.bpB, g:st.gB,
-    bolt:st.boltB, boltGrade:st.boltGradeB, n1:st.n1B, n2:st.n2B,
-    p1:st.p1B, p2:st.p2B, e1:st.e1B, e2:st.e2B, hole:st.holeB,
-    weldType:st.weldTypeB, weldLeg:st.weldLegB,
-  });
-}
-
 // One-sided fin-plate ELEVATION: supporting SECTION + supported beam in elevation (bolts as
 // holes). Parameterised by `st`, so it draws either the near beam or the independent far beam.
-// opts.stiff -> draw a stiffener plate on the opposite web face; opts.tag -> beam label suffix.
+// opts.stiff -> add the full-depth far-side stiffener; opts.tag -> beam label suffix.
 function finElevation(st, opts){
   opts = opts||{};
-  const out=[], fg=finGeom(st), {sec,prim,bp,yc,ys,xs,baseX,ftip,outside,plCy,plH,pyHalf,d0}=fg;
+  const out=[], fg=finGeom(st), {sec,prim,bp,yc,ys,xs,baseX,ftip,outside,plCy,plH,d0}=fg;
   const notch = notchAuto(st, sec, prim);            // "none" when outside (no cope)
   const g = st.g, Lsec = Math.max(sec.h*1.0, 360);
   const bgx = xs[0] + (st.n2-1)*st.p2/2;             // bolt group centre x
@@ -35,17 +22,7 @@ function finElevation(st, opts){
   const iP = iSectionPts(-prim.tw/2, 0, prim.h, prim.b, prim.tf, prim.tw);
   out.push(Pr.hatch(iP,"steel",{edge:false})); out.push(Pr.poly(iP,"out"));
   label(out, -(prim.b+prim.tw)/2-6, 0, prim.name+"  (main)", {anchor:"middle", rot:-90, weight:"bold"});
-
-  // optional full-depth stiffener on the opposite (far) web face: spans flange-to-flange,
-  // fitted to the flange tip, fillet-welded all-round (far web face + both flange undersides)
-  if(opts.stiff){
-    const sTop = pyHalf, sBot = -pyHalf, xWeb = -prim.tw, xTip = -(prim.b+prim.tw)/2;
-    out.push(Pr.r(xTip, sBot, xWeb-xTip, sTop-sBot, "plate"));
-    out.push(...weldRun(xWeb, sBot, xWeb, sTop, wleg, -1));   // far web-face weld (full depth)
-    out.push(...weldRun(xTip, sTop, xWeb, sTop, wleg, 1));    // top-flange weld
-    out.push(...weldRun(xTip, sBot, xWeb, sBot, wleg, -1));   // bottom-flange weld
-    label(out, xTip, sTop+14, "stiffener PL "+Math.round(st.ts)+" — full depth, welded all round", {anchor:"start", size:10});
-  }
+  if(opts.stiff) farStiffener(out, prim, st.ts, wleg);   // optional full-depth far-side stiffener
 
   // fin plate welded to main web (all-around web + both flanges when "outside"), projecting right.
   // Full depth at the support; cropped past the beam end (x>=xb0) to clear the supported flange(s).
@@ -77,7 +54,7 @@ function finElevation(st, opts){
 }
 
 // SECTION: supporting beam in elevation + supported beam cut as a cross-section + bolt side-views.
-// opts.stiff -> show the stiffener plate (hidden, on the far web face).
+// opts.stiff -> show the far-side stiffener (hidden, behind the web).
 function finSection(st, opts){
   opts = opts||{};
   const out=[], fg=finGeom(st), {sec,prim,b,yc,ys,outside,plCy,plH,pyHalf}=fg;
@@ -111,30 +88,4 @@ function finSection(st, opts){
   return out;
 }
 
-// Horizontally mirror an elevation (about x=0) so the far-beam connection reads as the
-// opposite hand of the near elevation — i.e. its beam frames in from the other side of the
-// girder. Negates every x; flips arc sweep, dim offsets, and start/end text anchors.
-function mirrorX(prims){
-  return prims.map(p=>{
-    const q=Object.assign({},p);
-    if(p.t==="l") q.a=[-p.a[0],p.a[1],-p.a[2],p.a[3]];
-    else if(p.t==="r") q.x=-(p.x+p.w);                       // keep width; mirror the left edge
-    else if(p.t==="c") q.cx=-p.cx;
-    else if(p.t==="p"||p.t==="h") q.pts=p.pts.map(z=>[-z[0],z[1]]);
-    else if(p.t==="pa") q.segs=p.segs.map(s=> s[0]==="A"?["A",s[1],-s[2],s[3],!s[4]] : s[0]==="Z"?s : [s[0],-s[1],s[2]]);
-    else if(p.t==="t"){ q.x=-p.x; if(p.anchor==="start")q.anchor="end"; else if(p.anchor==="end")q.anchor="start"; }
-    else if(p.t==="d"){ q.x1=-p.x1; q.x2=-p.x2; if(p.dir==="v")q.off=-(p.off||0); }
-    else if(p.t==="w"){ q.x=-p.x; q.lx=-p.lx; }
-    return q;
-  });
-}
-
-GEO["BB-FIN"] = function(st){
-  const stiff = st.farStiff ? {on:true} : null;
-  // View A: the near-side connection elevation (+ stiffener on the far face if enabled)
-  const A = finElevation(st, {stiff, tag: st.beam2 ? "near, side 1" : "supported"});
-  // View B: the far beam's elevation (mirrored to the opposite hand) when enabled, else the section
-  const B = st.beam2 ? mirrorX(finElevation(farBeamState(st), {tag:"far, side 2"}))
-                     : finSection(st, {stiff});
-  return {A, B};
-};
+GEO["BB-FIN"] = function(st){ return bbDoubleSided(st, finElevation, finSection); };
