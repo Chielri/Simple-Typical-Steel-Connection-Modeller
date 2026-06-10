@@ -389,6 +389,7 @@ const STY = {
   hidden:{s:"var(--steel)", w:0.9, f:"none", dash:"6,4"},
   center:{s:"var(--dim)",   w:0.6, f:"none", dash:"9,3,2,3"},
   thin:  {s:"var(--muted)", w:0.6, f:"none"},
+  fillonly:{s:"none",       w:0,   f:"none"},
   label: {s:"none",         w:0,   f:"var(--ink)"},
 };
 
@@ -752,9 +753,11 @@ GEO["BB-FIN"] = function(st){
   B.push(Pr.hatch([[0,yc-hp/2],[st.tp,yc-hp/2],[st.tp,yc+hp/2],[0,yc+hp/2]],"steel",{edge:false}));
   B.push(Pr.r(0, yc-hp/2, st.tp, hp, "plate"));
   B.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
-  // supported beam SECTION (cut, hatched), web bolted to plate
+  // supported beam SECTION (cut) — masks the main beam behind it, hatched, bold outline
   const iS = iSectionPts(scx, yc, sec.h, sec.b, sec.tf, sec.tw);
-  B.push(Pr.hatch(iS,"steel",{edge:false})); B.push(Pr.poly(iS,"out"));
+  B.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));      // white mask over main beam
+  B.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));  // section hatch (on top of mask)
+  B.push(Pr.poly(iS,"out",{w:1.9}));                         // bold cut outline
   for(const y of ys) B.push(...boltSide(0, y, st.tp+sec.tw, "left", b.d, b.washer));
   // dims
   if(st.n1>1) chainV(B, scx, sec.b/2+34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
@@ -827,7 +830,9 @@ GEO["BB-W"] = function(st){
       B.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
     label(B,scx-Lmain*0.36-6, yc, "stiff "+st.ts, {anchor:"middle",rot:-90,size:9}); }
   const iS=iSectionPts(scx,yc,sec.h,sec.b,sec.tf,sec.tw);
-  B.push(Pr.hatch(iS,"steel",{edge:false})); B.push(Pr.poly(iS,"out"));
+  B.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));
+  B.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));
+  B.push(Pr.poly(iS,"out",{w:1.9}));
   B.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
   B.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
   dimV(B,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
