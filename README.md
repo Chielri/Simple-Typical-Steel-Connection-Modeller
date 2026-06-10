@@ -24,6 +24,13 @@ Save JSON · Load JSON · Print (1:5/1:10/1:20) · dark/light toggle.
 
 ## Connection matrix
 
+**Beam-to-beam view convention** (per standard detailing): the primary view shows
+the **main/supporting beam as a cut cross-section** with the supported beam in
+**elevation** (bolts as holes); the second view is the complement — main beam in
+**elevation**, supported beam cut as a cross-section (bolts in side view). A
+`Beam alignment` control (top / centre / bottom) drives the framing offset and the
+auto-notch (top = tops flush → coped; centre = mid-aligned, no cope if it fits).
+
 | Family | IDs |
 |---|---|
 | Beam → Beam | `BB-FIN` fin plate · `BB-EP` end plate · `BB-W` direct welded |
