@@ -17,7 +17,7 @@ function farBeamState(st){
 // opts.stiff -> draw a stiffener plate on the opposite web face; opts.tag -> beam label suffix.
 function finElevation(st, opts){
   opts = opts||{};
-  const out=[], fg=finGeom(st), {sec,prim,bp,yc,ys,xs,baseX,ftip,outside,plCy,plH,d0}=fg;
+  const out=[], fg=finGeom(st), {sec,prim,bp,yc,ys,xs,baseX,ftip,outside,plCy,plH,pyHalf,d0}=fg;
   const notch = notchAuto(st, sec, prim);            // "none" when outside (no cope)
   const g = st.g, Lsec = Math.max(sec.h*1.0, 360);
   const bgx = xs[0] + (st.n2-1)*st.p2/2;             // bolt group centre x
@@ -36,12 +36,15 @@ function finElevation(st, opts){
   out.push(Pr.hatch(iP,"steel",{edge:false})); out.push(Pr.poly(iP,"out"));
   label(out, -(prim.b+prim.tw)/2-6, 0, prim.name+"  (main)", {anchor:"middle", rot:-90, weight:"bold"});
 
-  // optional stiffener / backing plate on the opposite (far) web face, mirroring the fin plate
+  // optional full-depth stiffener on the opposite (far) web face: spans flange-to-flange,
+  // fitted to the flange tip, fillet-welded all-round (far web face + both flange undersides)
   if(opts.stiff){
-    const sw = bp;
-    out.push(Pr.r(-prim.tw-sw, plBot, sw, plH, "plate"));
-    out.push(...weldRun(-prim.tw, plBot, -prim.tw, plTop, wleg, -1));
-    label(out, -prim.tw-sw, plTop+14, "stiffener PL "+Math.round(st.ts)+" thk", {anchor:"start", size:10});
+    const sTop = pyHalf, sBot = -pyHalf, xWeb = -prim.tw, xTip = -(prim.b+prim.tw)/2;
+    out.push(Pr.r(xTip, sBot, xWeb-xTip, sTop-sBot, "plate"));
+    out.push(...weldRun(xWeb, sBot, xWeb, sTop, wleg, -1));   // far web-face weld (full depth)
+    out.push(...weldRun(xTip, sTop, xWeb, sTop, wleg, 1));    // top-flange weld
+    out.push(...weldRun(xTip, sBot, xWeb, sBot, wleg, -1));   // bottom-flange weld
+    label(out, xTip, sTop+14, "stiffener PL "+Math.round(st.ts)+" — full depth, welded all round", {anchor:"start", size:10});
   }
 
   // fin plate welded to main web (all-around web + both flanges when "outside"), projecting right.
@@ -77,14 +80,14 @@ function finElevation(st, opts){
 // opts.stiff -> show the stiffener plate (hidden, on the far web face).
 function finSection(st, opts){
   opts = opts||{};
-  const out=[], fg=finGeom(st), {sec,prim,b,yc,ys,outside,plCy,plH}=fg;
+  const out=[], fg=finGeom(st), {sec,prim,b,yc,ys,outside,plCy,plH,pyHalf}=fg;
   const wleg = Math.max(st.weldLeg, 4);
   const plTop = plCy + plH/2, plBot = plCy - plH/2;
   const scx = st.tp + sec.tw/2;
   const Lmain = Math.max(sec.b + 300, 440);
   out.push(...beamElevBreak(scx, Lmain, 0, prim.h, prim.tf, "out"));     // main beam in elevation (broken segment)
-  // optional stiffener on the far face (behind the web in this view)
-  if(opts.stiff) out.push(Pr.r(-st.ts, plBot, st.ts, plH, "plate", {dash:"6,4"}));
+  // optional full-depth stiffener on the far face (behind the web in this view), flange to flange
+  if(opts.stiff) out.push(Pr.r(-st.ts, -pyHalf, st.ts, 2*pyHalf, "plate", {dash:"6,4"}));
   // fin plate seen edge-on at main web near face (full depth + all-around weld when outside)
   out.push(Pr.hatch([[0,plBot],[st.tp,plBot],[st.tp,plTop],[0,plTop]],"steel",{edge:false}));
   out.push(Pr.r(0, plBot, st.tp, plH, "plate"));

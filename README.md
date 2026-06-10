@@ -57,9 +57,10 @@ auto-notch (top = tops flush → coped; centre = mid-aligned, no cope if it fits
   opposite face of the supporting web. **View B switches from the section to that beam's
   elevation**, so the two panels become the two connection elevations (each fully dimensioned;
   the far beam is validated with `…-F` codes). The supporting member is shared.
-- **`Far-side stiffener plate`** — adds a stiffener / backing plate on the opposite web face,
-  mirroring the fin plate (welded to the web), to balance the single-sided fin-plate force.
-  Shown in the near elevation and (as a hidden outline) in the section.
+- **`Far-side stiffener plate`** — adds a **full-depth stiffener** on the opposite web face
+  (flange to flange, fitted to the flange tip), fillet-welded all-round to the web and both
+  flanges, to balance the single-sided fin-plate force. Shown in the near elevation and (as a
+  hidden outline) in the section.
 
 | Family | IDs |
 |---|---|
