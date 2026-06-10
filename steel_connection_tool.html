@@ -415,10 +415,14 @@ function iSectionPtsH(cx,cy,h,b,tf,tw){
 // Beam in side elevation (web face to viewer): outer rect + 2 inner flange lines.
 // origin = (x0,yc) left end at mid-height; runs +x by len, depth h.
 function beamElevH(x0,yc,len,h,tf,cls="out"){
-  const t=h/2, out=[];
-  out.push(Pr.r(x0,yc-t,len,h,cls));
-  out.push(Pr.l(x0,yc+t-tf,x0+len,yc+t-tf,cls));
-  out.push(Pr.l(x0,yc-t+tf,x0+len,yc-t+tf,cls));
+  const t=h/2, x1=x0+len, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
+  out.push(Pr.l(x0,top,x1,top,cls));               // top flange outer
+  out.push(Pr.l(x0,bot,x1,bot,cls));               // bottom flange outer
+  out.push(Pr.l(x0,top,x0,bot,cls));               // near end face
+  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));  // top flange inner
+  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));  // bottom flange inner
+  out.push(Pr.path([["M",x1,top],["L",x1,yc+h*0.16],["L",x1-z,yc+h*0.08],
+                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.0})); // far-end break
   return out;
 }
 // Beam in elevation shown as a finite SEGMENT with break (cut) lines at both ends —
@@ -684,18 +688,21 @@ function bCallout(n,size,grade,d0){ return `${n} No. ${size} Gr ${grade} in ${d0
 
 /* supported-beam side elevation with optional top/bottom copes (notch). */
 function beamElevNotched(x0, x1, yc, h, tf, notch, cls="out"){
-  const top=yc+h/2, bot=yc-h/2, r=10, out=[];
+  const top=yc+h/2, bot=yc-h/2, r=10, z=Math.min(8,h*0.03), out=[];
   const tN=notch&&notch.top, bN=notch&&notch.bot, segs=[];
-  segs.push(["M", x1, top]);
+  segs.push(["M", x1, top]);                              // far-top (terminated by break line)
   if(tN){ segs.push(["L", x0+tN.len, top]); segs.push(["L", x0+tN.len, top-tN.dep+r]);
           segs.push(["A", r, x0+tN.len-r, top-tN.dep, false]); segs.push(["L", x0, top-tN.dep]); }
   else  { segs.push(["L", x0, top]); }
   if(bN){ segs.push(["L", x0, bot+bN.dep]); segs.push(["L", x0+bN.len-r, bot+bN.dep]);
           segs.push(["A", r, x0+bN.len, bot+bN.dep-r, false]); segs.push(["L", x0+bN.len, bot]); }
   else  { segs.push(["L", x0, bot]); }
-  segs.push(["L", x1, bot]); segs.push(["L", x1, top]); segs.push(["Z"]);
+  segs.push(["L", x1, bot]);                              // bottom edge to far end (open)
   out.push(Pr.path(segs, cls));
-  const tfTop=top-tf, tfBot=bot+tf;
+  // far-end break (cut) line — shows the beam continues; makes the elevation read as a beam
+  out.push(Pr.path([["M",x1,top],["L",x1,yc+h*0.16],["L",x1-z,yc+h*0.08],
+                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.0}));
+  const tfTop=top-tf, tfBot=bot+tf;                       // flange inner lines (=> 2 lines per flange)
   out.push(Pr.l(tN?x0+tN.len:x0, tfTop, x1, tfTop, cls, {w:1.0}));
   out.push(Pr.l(bN?x0+bN.len:x0, tfBot, x1, tfBot, cls, {w:1.0}));
   return out;
@@ -711,7 +718,7 @@ const GEO = {};
 GEO["BB-FIN"] = function(st){
   const A=[], B=[], fg=finGeom(st), {sec,prim,b,la,bp,hp,yc,ys,xs,d0}=fg;
   const notch = notchAuto(st, sec, prim);
-  const g = st.g, Lsec = Math.max(1.4*sec.h, 360);
+  const g = st.g, Lsec = Math.max(sec.h*1.0, 360);
   const bgx = la + (st.n2-1)*st.p2/2;               // bolt group centre x
   const ftip = (prim.b - prim.tw)/2;                // main beam right flange tip (web right face at x=0)
 
@@ -762,7 +769,7 @@ GEO["BB-FIN"] = function(st){
 GEO["BB-EP"] = function(st){
   const A=[], B=[], eg=epGeom(st), {sec,prim,b,hp,yc,ys,bpw,d0}=eg;
   const notch = notchAuto(st, sec, prim);
-  const Lsec=Math.max(1.4*sec.h,360), tep=st.tep, g=st.g;
+  const Lsec=Math.max(sec.h*1.0,360), tep=st.tep, g=st.g;
   const ftip=(prim.b-prim.tw)/2;
 
   /* View A : MAIN beam SECTION + supported beam ELEVATION (end plate edge-on) */
@@ -796,7 +803,7 @@ GEO["BB-EP"] = function(st){
 /* ---------------- BB-W : Beam-to-beam direct welded ----------------- */
 GEO["BB-W"] = function(st){
   const A=[], B=[], {sec,prim}=members();
-  const notch=notchAuto(st,sec,prim), Lsec=Math.max(1.4*sec.h,360);
+  const notch=notchAuto(st,sec,prim), Lsec=Math.max(sec.h*1.0,360);
   const yc=alignYc(st.align||"top",prim,sec), fkind=st.weldType, top=yc+sec.h/2, bot=yc-sec.h/2;
   const ftip=(prim.b-prim.tw)/2;
 
@@ -847,7 +854,7 @@ GEO["BC-FIN"] = function(st){
   const la = st.bp>0 ? Math.max(st.bp-st.e2-(st.n2-1)*st.p2,20) : Math.max(50,2*b.d);
   const bp = st.bp>0 ? st.bp : la+(st.n2-1)*st.p2+st.e2;
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1+2*st.e1;
-  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(1.4*sec.h,360);
+  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(sec.h*1.0,360);
   const colLen=Math.max(sec.h*1.9, sec.h+360), bgx=la+(st.n2-1)*st.p2/2;
 
   /* View A : elevation */
@@ -893,7 +900,7 @@ GEO["BC-EP"] = function(st){
   const A=[], B=[], {sec,prim}=members(), b=boltProps(), d0=holeDia();
   const ext = st.epMode==="extended";
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1 + (ext? st.p1*0.6:0);
-  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(1.4*sec.h,360);
+  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(sec.h*1.0,360);
   const tep=st.tep, colLen=Math.max(sec.h*1.9,sec.h+360), half=st.w/2;
   const bpw=st.w+2*Math.max(st.e2,1.5*b.d);
   const epTop = ext? sec.h/2+st.e1 : sec.h/2, epBot=-sec.h/2-( ext?0:0);
@@ -927,7 +934,7 @@ GEO["BC-EP"] = function(st){
 
 /* ---------------- BC-W : Beam to column, welded moment -------------- */
 GEO["BC-W"] = function(st){
-  const A=[], B=[], {sec,prim}=members(), Lsec=Math.max(1.4*sec.h,380);
+  const A=[], B=[], {sec,prim}=members(), Lsec=Math.max(sec.h*1.0,380);
   const colLen=Math.max(sec.h*2.0,sec.h+420);
   /* View A : elevation */
   A.push(...columnElev(0,prim.h,colLen,prim.tf,0));
@@ -1080,7 +1087,7 @@ GEO["BCON-FIN"] = function(st){
   const A=[], B=[], cc=bconCommon(st), {sec,d,hef,concT,Lp,Bp}=cc, bolt=boltProps(), d0=holeDia();
   const la=st.bp>0?Math.max(st.bp-st.e2-(st.n2-1)*st.p2,20):Math.max(50,2*bolt.d);
   const bp=st.bp>0?st.bp:la+(st.n2-1)*st.p2+st.e2, hp=st.hp>0?st.hp:(st.n1-1)*st.p1+2*st.e1;
-  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(1.4*sec.h,360), Hc=Math.max(st.concH,Lp+200);
+  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(sec.h*1.0,360), Hc=Math.max(st.concH,Lp+200);
   const T=st.T;
   /* View A : elevation */
   concreteBlock(A, -concT/2, Hc/2, concT, Hc);             // concrete to the left, face at x=0
@@ -1113,7 +1120,7 @@ GEO["BCON-FIN"] = function(st){
 };
 GEO["BCON-W"] = function(st){
   const A=[], B=[], cc=bconCommon(st), {sec,d,hef,concT,Lp,Bp}=cc, g=st.g, T=st.T;
-  const Lsec=Math.max(1.4*sec.h,360), Hc=Math.max(st.concH,Lp+200);
+  const Lsec=Math.max(sec.h*1.0,360), Hc=Math.max(st.concH,Lp+200);
   concreteBlock(A,-concT/2,Hc/2,concT,Hc);
   A.push(Pr.r(-T,-Lp/2,T,Lp,"plate"));
   const aty=anchorPos(Lp,Math.max(2,st.na1),st.ca,st.sa1);
