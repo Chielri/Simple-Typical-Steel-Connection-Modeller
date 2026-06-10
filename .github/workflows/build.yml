@@ -1,0 +1,58 @@
+name: Build
+
+# Rebuild the single-file HTML from the modular src/ tree on every push,
+# verify every connection still renders, publish the artifact, and keep the
+# committed steel_connection_tool.html in sync.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build single-file HTML
+        run: node build.mjs
+
+      - name: Verify (geometry + validation smoke test)
+        run: node verify.mjs
+
+      - name: Upload built HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: steel_connection_tool
+          path: steel_connection_tool.html
+          if-no-files-found: error
+
+      # On a push, if the rebuilt file differs from what's committed, commit it
+      # back so the repo's HTML always matches src/. The "[skip ci]" tag stops
+      # this commit from re-triggering the workflow (no loop). Skipped on PRs
+      # (forks lack write access) and when nothing changed.
+      - name: Commit rebuilt HTML if it drifted
+        if: github.event_name == 'push'
+        run: |
+          if git diff --quiet -- steel_connection_tool.html; then
+            echo "steel_connection_tool.html already up to date."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add steel_connection_tool.html
+            git commit -m "build: regenerate steel_connection_tool.html [skip ci]"
+            git push
+          fi

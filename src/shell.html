@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steel Connection Detailer — SS EN 1993-1-8 / SSSS</title>
+<style>
+<!--@STYLES@-->
+</style>
+</head>
+<body>
+<header id="topbar">
+  <span class="ttl">Steel Connection Detailer</span>
+  <span class="sub" id="connTitle">—</span>
+  <span class="spacer"></span>
+  <span class="seg" id="viewSeg">
+    <button data-v="A">Elevation</button>
+    <button data-v="B">Section</button>
+    <button data-v="both" class="on">Both</button>
+  </span>
+  <button class="btn" id="btnTable">Param table</button>
+  <button class="btn" id="btnSVG">Export SVG</button>
+  <button class="btn" id="btnPNG">Export PNG</button>
+  <button class="btn" id="btnSave">Save JSON</button>
+  <button class="btn" id="btnLoad">Load JSON</button>
+  <button class="btn" id="btnPrint">Print</button>
+  <button class="btn" id="btnTheme" title="Toggle dark">◐</button>
+  <input type="file" id="fileIn" accept="application/json" hidden>
+</header>
+<div id="app">
+  <aside id="panel">
+    <div id="panelScroll">
+      <div class="tiles" id="tiles"></div>
+      <div id="accordions"></div>
+    </div>
+    <div id="validate"></div>
+  </aside>
+  <main id="stage">
+    <div id="views">
+      <figure id="figA"><div class="svgwrap"><svg id="viewA" xmlns="http://www.w3.org/2000/svg"></svg></div><figcaption><span id="capA">Elevation</span><b id="scaleA"></b></figcaption></figure>
+      <figure id="figB"><div class="svgwrap"><svg id="viewB" xmlns="http://www.w3.org/2000/svg"></svg></div><figcaption><span id="capB">Section / Plan</span><b id="scaleB"></b></figcaption></figure>
+    </div>
+    <div id="titleStrip"></div>
+    <div id="paramTableWrap" hidden></div>
+  </main>
+</div>
+<script>
+<!--@SCRIPTS@-->
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "simple-typical-steel-connection-modeller",
+  "version": "1.0.0",
+  "description": "Parametric 2D steel connection detailing tool — modular source, built to a single offline HTML file.",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "verify": "node verify.mjs",
+    "test": "node verify.mjs",
+    "prepublishOnly": "node build.mjs && node verify.mjs"
+  },
+  "license": "MIT"
+}
