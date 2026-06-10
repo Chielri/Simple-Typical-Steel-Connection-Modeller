@@ -73,6 +73,8 @@ body.dark .vbadge.e{background:#3a1c1c} body.dark .vbadge.w{background:#3a2e16} 
 .vitem .code{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;padding:1px 5px;border-radius:4px;background:var(--tile);white-space:nowrap}
 .vitem.e .code{color:var(--err)} .vitem.w .code{color:var(--warn)}
 .vitem.ok{color:var(--muted)}
+.vnote{font-size:11px;color:var(--muted);background:var(--tile);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:5px;padding:6px 8px;margin:2px 0 8px;line-height:1.4}
+.vnote b{color:var(--ink)}
 #titleStrip{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-weight:700;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 #titleStrip .sep{color:var(--line)}
 #titleStrip .muted{font-weight:500;color:var(--muted)}
@@ -1444,6 +1446,8 @@ function renderValidation(items){
   h+= ne?`<span class="vbadge e">${ne} error${ne>1?"s":""}</span>`:`<span class="vbadge ok">no errors</span>`;
   if(nw) h+=`<span class="vbadge w">${nw} warn${nw>1?"s":""}</span>`;
   h+=`</h4>`;
+  // Standing disclaimer (§4 review): a clean result is geometry/spacing only — no capacity is computed.
+  h+=`<div class="vnote"><b>Detailing check only</b> — bolt, weld &amp; plate capacities are <b>not</b> calculated. A clear result means geometry &amp; spacing are legal, not that shear, bearing, weld or block-tearing resistance is adequate.</div>`;
   for(const it of items){
     if(it.level==="ok"){ h+=`<div class="vitem ok"><span class="code">OK</span><span>${it.msg}</span></div>`; continue; }
     h+=`<div class="vitem ${it.level==="error"?"e":"w"}"><span class="code">${it.code}</span><span>${it.msg}</span></div>`;
