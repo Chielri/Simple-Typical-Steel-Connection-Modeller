@@ -1,0 +1,1428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steel Connection Detailer — SS EN 1993-1-8 / SSSS</title>
+<style>
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --ink:#1a1f26; --muted:#5a6573; --line:#c9d2dc;
+  --accent:#1565c0; --accent2:#0d47a1; --tile:#f4f7fb; --tileSel:#1565c0;
+  --err:#c62828; --warn:#e08600; --ok:#2e7d32; --paper:#ffffff;
+  --steel:#2b3138; --plate:#37414b; --bolt:#222; --dim:#0a66c2; --weld:#7a1fa2;
+}
+body.dark{
+  --bg:#11151a; --panel:#1a2027; --ink:#e7edf3; --muted:#93a1b0; --line:#2c3742;
+  --accent:#4f9bff; --accent2:#2f7be0; --tile:#222b34; --tileSel:#2f7be0;
+  --paper:#0f1318; --steel:#cfd8e0; --plate:#aeb9c4; --bolt:#dfe6ec; --dim:#5db0ff; --weld:#cf8bff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:13px/1.4 "Segoe UI",system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg);overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+#topbar{display:flex;align-items:center;gap:10px;height:46px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.06);position:relative;z-index:5}
+#topbar .ttl{font-weight:700;font-size:14px;white-space:nowrap}
+#topbar .sub{color:var(--muted);font-size:12px;white-space:nowrap}
+#topbar .spacer{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--tile);padding:5px 10px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:var(--tile);border-radius:6px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+#app{display:flex;height:calc(100% - 46px)}
+#panel{width:344px;min-width:344px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+#panelScroll{overflow-y:auto;flex:1;padding:10px}
+#stage{flex:1;display:flex;flex-direction:column;overflow:auto;padding:14px;gap:12px}
+#views{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px;flex:1 1 460px;min-width:340px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+figure svg{display:block;width:100%;height:560px;background:var(--paper);border-radius:4px}
+figcaption{display:flex;justify-content:space-between;align-items:center;padding:6px 8px 2px;color:var(--muted);font-size:12px}
+figcaption b{color:var(--ink)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.fam{grid-column:1 / -1;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:6px 0 0;font-weight:700}
+.tile{border:1px solid var(--line);background:var(--tile);border-radius:7px;padding:7px 8px;cursor:pointer;text-align:left}
+.tile:hover{border-color:var(--accent)}
+.tile.sel{background:var(--tileSel);color:#fff;border-color:var(--tileSel)}
+.tile .id{font-weight:700;font-size:12px}
+.tile .nm{font-size:10.5px;opacity:.85;line-height:1.25;margin-top:2px}
+.acc{border:1px solid var(--line);border-radius:7px;margin-top:8px;overflow:hidden}
+.acc>summary{cursor:pointer;padding:8px 10px;font-weight:600;background:var(--tile);list-style:none;display:flex;justify-content:space-between;align-items:center}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary::after{content:"▾";color:var(--muted)}
+.acc[open]>summary::after{content:"▴"}
+.acc .body{padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:7px 10px}
+.fld{display:flex;flex-direction:column;gap:2px}
+.fld.full{grid-column:1 / -1}
+.fld label{font-size:11px;color:var(--muted)}
+.fld .ico{font-size:10px;color:var(--accent);cursor:help}
+.fld input,.fld select{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;background:var(--paper)}
+.numwrap{display:flex;align-items:stretch}
+.numwrap input{border-radius:5px 0 0 5px;border-right:0}
+.numwrap .stp{display:flex;flex-direction:column;border:1px solid var(--line);border-left:0;border-radius:0 5px 5px 0}
+.numwrap .stp button{border:0;background:var(--tile);cursor:pointer;line-height:1;padding:0 6px;font-size:9px;flex:1}
+.numwrap .stp button:first-child{border-bottom:1px solid var(--line)}
+.hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px}
+#validate{border-top:1px solid var(--line);max-height:38%;overflow-y:auto;padding:8px 10px;background:var(--panel)}
+#validate h4{margin:0 0 6px;font-size:12px;display:flex;align-items:center;gap:8px}
+.vbadge{font-size:11px;padding:1px 7px;border-radius:10px;font-weight:700}
+.vbadge.e{background:#fdecea;color:var(--err)} .vbadge.w{background:#fff4e0;color:var(--warn)} .vbadge.ok{background:#e8f5e9;color:var(--ok)}
+body.dark .vbadge.e{background:#3a1c1c} body.dark .vbadge.w{background:#3a2e16} body.dark .vbadge.ok{background:#16331b}
+.vitem{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px dashed var(--line);font-size:12px}
+.vitem .code{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;padding:1px 5px;border-radius:4px;background:var(--tile);white-space:nowrap}
+.vitem.e .code{color:var(--err)} .vitem.w .code{color:var(--warn)}
+.vitem.ok{color:var(--muted)}
+#titleStrip{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-weight:700;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+#titleStrip .sep{color:var(--line)}
+#titleStrip .muted{font-weight:500;color:var(--muted)}
+#paramTableWrap{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px}
+#paramTableWrap h3{margin:0 0 8px;font-size:13px}
+table.pt{border-collapse:collapse;width:100%;font-size:12px}
+table.pt td,table.pt th{border:1px solid var(--line);padding:4px 8px;text-align:left}
+table.pt th{background:var(--tile);width:38%}
+table.pt caption{caption-side:top;text-align:left;font-weight:700;margin-bottom:4px}
+.svgwrap{position:relative}
+/* SVG element classes (set via attributes too, but defaults here) */
+svg text{font-family:"Segoe UI",Arial,sans-serif}
+@media print{
+  body{overflow:visible;background:#fff;color:#000}
+  #topbar,#panel{display:none!important}
+  #app{display:block;height:auto}
+  #stage{display:block;overflow:visible;padding:0}
+  #views{display:block}
+  figure{break-inside:avoid;border:0;box-shadow:none;page-break-inside:avoid;width:100%}
+  figure svg{height:auto}
+  #paramTableWrap{break-before:auto;border:0}
+}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <span class="ttl">Steel Connection Detailer</span>
+  <span class="sub" id="connTitle">—</span>
+  <span class="spacer"></span>
+  <span class="seg" id="viewSeg">
+    <button data-v="A">Elevation</button>
+    <button data-v="B">Section</button>
+    <button data-v="both" class="on">Both</button>
+  </span>
+  <button class="btn" id="btnTable">Param table</button>
+  <button class="btn" id="btnSVG">Export SVG</button>
+  <button class="btn" id="btnPNG">Export PNG</button>
+  <button class="btn" id="btnSave">Save JSON</button>
+  <button class="btn" id="btnLoad">Load JSON</button>
+  <button class="btn" id="btnPrint">Print</button>
+  <button class="btn" id="btnTheme" title="Toggle dark">◐</button>
+  <input type="file" id="fileIn" accept="application/json" hidden>
+</header>
+<div id="app">
+  <aside id="panel">
+    <div id="panelScroll">
+      <div class="tiles" id="tiles"></div>
+      <div id="accordions"></div>
+    </div>
+    <div id="validate"></div>
+  </aside>
+  <main id="stage">
+    <div id="views">
+      <figure id="figA"><div class="svgwrap"><svg id="viewA" xmlns="http://www.w3.org/2000/svg"></svg></div><figcaption><span id="capA">Elevation</span><b id="scaleA"></b></figcaption></figure>
+      <figure id="figB"><div class="svgwrap"><svg id="viewB" xmlns="http://www.w3.org/2000/svg"></svg></div><figcaption><span id="capB">Section / Plan</span><b id="scaleB"></b></figcaption></figure>
+    </div>
+    <div id="titleStrip"></div>
+    <div id="paramTableWrap" hidden></div>
+  </main>
+</div>
+<script>
+"use strict";
+/* =====================================================================
+   Parametric Steel Connection Detailing Tool — single file, vanilla JS
+   Design basis: SS EN 1993-1-8, SSSS Design Guide for Buildable Steel
+   Connections (Liew 2019), SCI P358/P363 conventions.
+   Phase 1: geometry + detailing-rule validation only (no capacity).
+   ===================================================================== */
+
+/* ---------- §4 Section database (embedded verbatim, 149 UK sections) -- */
+const SECTIONS = [{"name":"UKB1016X305X487","type":"UKB","h":1036.3,"b":308.5,"tf":54.1,"tw":30.0,"r":30.0,"A_cm2":620.0,"mass":487.0},{"name":"UKB1016X305X437","type":"UKB","h":1026.1,"b":305.4,"tf":49.0,"tw":26.9,"r":30.0,"A_cm2":557.0,"mass":437.0},{"name":"UKB1016X305X393","type":"UKB","h":1015.9,"b":303.0,"tf":43.9,"tw":24.4,"r":30.0,"A_cm2":500.0,"mass":393.0},{"name":"UKB1016X305X349","type":"UKB","h":1008.1,"b":302.0,"tf":40.0,"tw":21.1,"r":30.0,"A_cm2":445.0,"mass":349.0},{"name":"UKB1016X305X314","type":"UKB","h":999.9,"b":300.0,"tf":35.9,"tw":19.1,"r":30.0,"A_cm2":400.0,"mass":314.0},{"name":"UKB1016X305X272","type":"UKB","h":990.1,"b":300.0,"tf":31.0,"tw":16.5,"r":30.0,"A_cm2":347.0,"mass":272.0},{"name":"UKB1016X305X249","type":"UKB","h":980.1,"b":300.0,"tf":26.0,"tw":16.5,"r":30.0,"A_cm2":317.0,"mass":249.0},{"name":"UKB1016X305X222","type":"UKB","h":970.3,"b":300.0,"tf":21.1,"tw":16.0,"r":30.0,"A_cm2":283.0,"mass":222.0},{"name":"UKB914X419X388","type":"UKB","h":921.0,"b":420.5,"tf":36.6,"tw":21.4,"r":24.1,"A_cm2":494.0,"mass":388.0},{"name":"UKB914X419X343","type":"UKB","h":911.8,"b":418.5,"tf":32.0,"tw":19.4,"r":24.1,"A_cm2":437.0,"mass":343.0},{"name":"UKB914X305X289","type":"UKB","h":926.6,"b":307.7,"tf":32.0,"tw":19.5,"r":19.1,"A_cm2":368.0,"mass":289.0},{"name":"UKB914X305X253","type":"UKB","h":918.4,"b":305.5,"tf":27.9,"tw":17.3,"r":19.1,"A_cm2":323.0,"mass":253.0},{"name":"UKB914X305X224","type":"UKB","h":910.4,"b":304.1,"tf":23.9,"tw":15.9,"r":19.1,"A_cm2":286.0,"mass":224.0},{"name":"UKB914X305X201","type":"UKB","h":903.0,"b":303.3,"tf":20.2,"tw":15.1,"r":19.1,"A_cm2":256.0,"mass":201.0},{"name":"UKB838X292X226","type":"UKB","h":850.9,"b":293.8,"tf":26.8,"tw":16.1,"r":17.8,"A_cm2":289.0,"mass":226.0},{"name":"UKB838X292X194","type":"UKB","h":840.7,"b":292.4,"tf":21.7,"tw":14.7,"r":17.8,"A_cm2":247.0,"mass":194.0},{"name":"UKB838X292X176","type":"UKB","h":834.9,"b":291.7,"tf":18.8,"tw":14.0,"r":17.8,"A_cm2":224.0,"mass":176.0},{"name":"UKB762X267X197","type":"UKB","h":769.8,"b":268.0,"tf":25.4,"tw":15.6,"r":16.5,"A_cm2":251.0,"mass":197.0},{"name":"UKB762X267X173","type":"UKB","h":762.2,"b":266.7,"tf":21.6,"tw":14.3,"r":16.5,"A_cm2":220.0,"mass":173.0},{"name":"UKB762X267X147","type":"UKB","h":754.0,"b":265.2,"tf":17.5,"tw":12.8,"r":16.5,"A_cm2":187.0,"mass":147.0},{"name":"UKB762X267X134","type":"UKB","h":750.0,"b":264.4,"tf":15.5,"tw":12.0,"r":16.5,"A_cm2":171.0,"mass":134.0},{"name":"UKB686X254X170","type":"UKB","h":692.9,"b":255.8,"tf":23.7,"tw":14.5,"r":15.2,"A_cm2":217.0,"mass":170.0},{"name":"UKB686X254X152","type":"UKB","h":687.5,"b":254.5,"tf":21.0,"tw":13.2,"r":15.2,"A_cm2":194.0,"mass":152.0},{"name":"UKB686X254X140","type":"UKB","h":683.5,"b":253.7,"tf":19.0,"tw":12.4,"r":15.2,"A_cm2":178.0,"mass":140.0},{"name":"UKB686X254X125","type":"UKB","h":677.9,"b":253.0,"tf":16.2,"tw":11.7,"r":15.2,"A_cm2":159.0,"mass":125.0},{"name":"UKB610X305X238","type":"UKB","h":635.8,"b":311.4,"tf":31.4,"tw":18.4,"r":16.5,"A_cm2":303.0,"mass":238.0},{"name":"UKB610X305X179","type":"UKB","h":620.2,"b":307.1,"tf":23.6,"tw":14.1,"r":16.5,"A_cm2":228.0,"mass":179.0},{"name":"UKB610X305X149","type":"UKB","h":612.4,"b":304.8,"tf":19.7,"tw":11.8,"r":16.5,"A_cm2":190.0,"mass":149.0},{"name":"UKB610X229X140","type":"UKB","h":617.2,"b":230.2,"tf":22.1,"tw":13.1,"r":12.7,"A_cm2":178.0,"mass":140.0},{"name":"UKB610X229X125","type":"UKB","h":612.2,"b":229.0,"tf":19.6,"tw":11.9,"r":12.7,"A_cm2":159.0,"mass":125.0},{"name":"UKB610X229X113","type":"UKB","h":607.6,"b":228.2,"tf":17.3,"tw":11.1,"r":12.7,"A_cm2":144.0,"mass":113.0},{"name":"UKB610X229X101","type":"UKB","h":602.6,"b":227.6,"tf":14.8,"tw":10.5,"r":12.7,"A_cm2":129.0,"mass":101.0},{"name":"UKB610X178X100","type":"UKB","h":607.4,"b":179.2,"tf":17.2,"tw":11.3,"r":12.7,"A_cm2":128.0,"mass":100.0},{"name":"UKB610X178X92","type":"UKB","h":603.0,"b":178.8,"tf":15.0,"tw":10.9,"r":12.7,"A_cm2":117.0,"mass":92.0},{"name":"UKB610X178X82","type":"UKB","h":598.6,"b":177.9,"tf":12.8,"tw":10.0,"r":12.7,"A_cm2":104.0,"mass":82.0},{"name":"UKB533X312X272","type":"UKB","h":577.1,"b":320.2,"tf":37.6,"tw":21.1,"r":12.7,"A_cm2":348.0,"mass":272.0},{"name":"UKB533X312X219","type":"UKB","h":560.3,"b":317.4,"tf":29.2,"tw":18.3,"r":12.7,"A_cm2":279.0,"mass":219.0},{"name":"UKB533X312X182","type":"UKB","h":550.7,"b":314.5,"tf":24.4,"tw":15.2,"r":12.7,"A_cm2":231.0,"mass":182.0},{"name":"UKB533X312X150","type":"UKB","h":542.5,"b":312.0,"tf":20.3,"tw":12.7,"r":12.7,"A_cm2":192.0,"mass":150.0},{"name":"UKB533X210X138","type":"UKB","h":549.1,"b":213.9,"tf":23.6,"tw":14.7,"r":12.7,"A_cm2":176.0,"mass":138.0},{"name":"UKB533X210X122","type":"UKB","h":544.5,"b":211.9,"tf":21.3,"tw":12.7,"r":12.7,"A_cm2":155.0,"mass":122.0},{"name":"UKB533X210X109","type":"UKB","h":539.5,"b":210.8,"tf":18.8,"tw":11.6,"r":12.7,"A_cm2":139.0,"mass":109.0},{"name":"UKB533X210X101","type":"UKB","h":536.7,"b":210.0,"tf":17.4,"tw":10.8,"r":12.7,"A_cm2":129.0,"mass":101.0},{"name":"UKB533X210X92","type":"UKB","h":533.1,"b":209.3,"tf":15.6,"tw":10.1,"r":12.7,"A_cm2":117.0,"mass":92.0},{"name":"UKB533X210X82","type":"UKB","h":528.3,"b":208.8,"tf":13.2,"tw":9.6,"r":12.7,"A_cm2":105.0,"mass":82.0},{"name":"UKB533X165X85","type":"UKB","h":534.9,"b":166.5,"tf":16.5,"tw":10.3,"r":12.7,"A_cm2":108.0,"mass":85.0},{"name":"UKB533X165X74","type":"UKB","h":529.1,"b":165.9,"tf":13.6,"tw":9.7,"r":12.7,"A_cm2":95.2,"mass":74.0},{"name":"UKB533X165X66","type":"UKB","h":524.7,"b":165.1,"tf":11.4,"tw":8.9,"r":12.7,"A_cm2":83.7,"mass":66.0},{"name":"UKB457X191X161","type":"UKB","h":492.0,"b":199.4,"tf":32.0,"tw":18.0,"r":10.2,"A_cm2":206.0,"mass":161.0},{"name":"UKB457X191X133","type":"UKB","h":480.6,"b":196.7,"tf":26.3,"tw":15.3,"r":10.2,"A_cm2":170.0,"mass":133.0},{"name":"UKB457X191X106","type":"UKB","h":469.2,"b":194.0,"tf":20.6,"tw":12.6,"r":10.2,"A_cm2":135.0,"mass":106.0},{"name":"UKB457X191X98","type":"UKB","h":467.2,"b":192.8,"tf":19.6,"tw":11.4,"r":10.2,"A_cm2":125.0,"mass":98.0},{"name":"UKB457X191X89","type":"UKB","h":463.4,"b":191.9,"tf":17.7,"tw":10.5,"r":10.2,"A_cm2":114.0,"mass":89.0},{"name":"UKB457X191X82","type":"UKB","h":460.0,"b":191.3,"tf":16.0,"tw":9.9,"r":10.2,"A_cm2":104.0,"mass":82.0},{"name":"UKB457X191X74","type":"UKB","h":457.0,"b":190.4,"tf":14.5,"tw":9.0,"r":10.2,"A_cm2":94.6,"mass":74.0},{"name":"UKB457X191X67","type":"UKB","h":453.4,"b":189.9,"tf":12.7,"tw":8.5,"r":10.2,"A_cm2":85.5,"mass":67.0},{"name":"UKB457X152X82","type":"UKB","h":465.8,"b":155.3,"tf":18.9,"tw":10.5,"r":10.2,"A_cm2":105.0,"mass":82.0},{"name":"UKB457X152X74","type":"UKB","h":462.0,"b":154.4,"tf":17.0,"tw":9.6,"r":10.2,"A_cm2":94.5,"mass":74.0},{"name":"UKB457X152X67","type":"UKB","h":458.0,"b":153.8,"tf":15.0,"tw":9.0,"r":10.2,"A_cm2":85.6,"mass":67.0},{"name":"UKB457X152X60","type":"UKB","h":454.6,"b":152.9,"tf":13.3,"tw":8.1,"r":10.2,"A_cm2":76.2,"mass":60.0},{"name":"UKB457X152X52","type":"UKB","h":449.8,"b":152.4,"tf":10.9,"tw":7.6,"r":10.2,"A_cm2":66.6,"mass":52.0},{"name":"UKB406X178X85","type":"UKB","h":417.2,"b":181.9,"tf":18.2,"tw":10.9,"r":10.2,"A_cm2":109.0,"mass":85.0},{"name":"UKB406X178X74","type":"UKB","h":412.8,"b":179.5,"tf":16.0,"tw":9.5,"r":10.2,"A_cm2":94.5,"mass":74.0},{"name":"UKB406X178X67","type":"UKB","h":409.4,"b":178.8,"tf":14.3,"tw":8.8,"r":10.2,"A_cm2":85.5,"mass":67.0},{"name":"UKB406X178X60","type":"UKB","h":406.4,"b":177.9,"tf":12.8,"tw":7.9,"r":10.2,"A_cm2":76.5,"mass":60.0},{"name":"UKB406X178X54","type":"UKB","h":402.6,"b":177.7,"tf":10.9,"tw":7.7,"r":10.2,"A_cm2":69.0,"mass":54.0},{"name":"UKB406X140X53","type":"UKB","h":406.6,"b":143.3,"tf":12.9,"tw":7.9,"r":10.2,"A_cm2":67.9,"mass":53.0},{"name":"UKB406X140X46","type":"UKB","h":403.2,"b":142.2,"tf":11.2,"tw":6.8,"r":10.2,"A_cm2":58.6,"mass":46.0},{"name":"UKB406X140X39","type":"UKB","h":398.0,"b":141.8,"tf":8.6,"tw":6.4,"r":10.2,"A_cm2":49.7,"mass":39.0},{"name":"UKB356X171X67","type":"UKB","h":363.4,"b":173.2,"tf":15.7,"tw":9.1,"r":10.2,"A_cm2":85.5,"mass":67.0},{"name":"UKB356X171X57","type":"UKB","h":358.0,"b":172.2,"tf":13.0,"tw":8.1,"r":10.2,"A_cm2":72.6,"mass":57.0},{"name":"UKB356X171X51","type":"UKB","h":355.0,"b":171.5,"tf":11.5,"tw":7.4,"r":10.2,"A_cm2":64.9,"mass":51.0},{"name":"UKB356X171X45","type":"UKB","h":351.4,"b":171.1,"tf":9.7,"tw":7.0,"r":10.2,"A_cm2":57.3,"mass":45.0},{"name":"UKB356X127X39","type":"UKB","h":353.4,"b":126.0,"tf":10.7,"tw":6.6,"r":10.2,"A_cm2":49.8,"mass":39.0},{"name":"UKB356X127X33","type":"UKB","h":349.0,"b":125.4,"tf":8.5,"tw":6.0,"r":10.2,"A_cm2":42.1,"mass":33.0},{"name":"UKB305X165X54","type":"UKB","h":310.4,"b":166.9,"tf":13.7,"tw":7.9,"r":8.9,"A_cm2":68.8,"mass":54.0},{"name":"UKB305X165X46","type":"UKB","h":306.6,"b":165.7,"tf":11.8,"tw":6.7,"r":8.9,"A_cm2":58.7,"mass":46.0},{"name":"UKB305X165X40","type":"UKB","h":303.4,"b":165.0,"tf":10.2,"tw":6.0,"r":8.9,"A_cm2":51.3,"mass":40.0},{"name":"UKB305X127X48","type":"UKB","h":311.0,"b":125.3,"tf":14.0,"tw":9.0,"r":8.9,"A_cm2":61.2,"mass":48.0},{"name":"UKB305X127X42","type":"UKB","h":307.2,"b":124.3,"tf":12.1,"tw":8.0,"r":8.9,"A_cm2":53.4,"mass":42.0},{"name":"UKB305X127X37","type":"UKB","h":304.4,"b":123.4,"tf":10.7,"tw":7.1,"r":8.9,"A_cm2":47.2,"mass":37.0},{"name":"UKB305X102X33","type":"UKB","h":312.7,"b":102.4,"tf":10.8,"tw":6.6,"r":7.6,"A_cm2":41.8,"mass":33.0},{"name":"UKB305X102X28","type":"UKB","h":308.7,"b":101.8,"tf":8.8,"tw":6.0,"r":7.6,"A_cm2":35.9,"mass":28.0},{"name":"UKB305X102X25","type":"UKB","h":305.1,"b":101.6,"tf":7.0,"tw":5.8,"r":7.6,"A_cm2":31.6,"mass":25.0},{"name":"UKB254X146X43","type":"UKB","h":259.6,"b":147.3,"tf":12.7,"tw":7.2,"r":7.6,"A_cm2":54.8,"mass":43.0},{"name":"UKB254X146X37","type":"UKB","h":256.0,"b":146.4,"tf":10.9,"tw":6.3,"r":7.6,"A_cm2":47.2,"mass":37.0},{"name":"UKB254X146X31","type":"UKB","h":251.4,"b":146.1,"tf":8.6,"tw":6.0,"r":7.6,"A_cm2":39.7,"mass":31.0},{"name":"UKB254X102X28","type":"UKB","h":260.4,"b":102.2,"tf":10.0,"tw":6.3,"r":7.6,"A_cm2":36.1,"mass":28.0},{"name":"UKB254X102X25","type":"UKB","h":257.2,"b":101.9,"tf":8.4,"tw":6.0,"r":7.6,"A_cm2":32.0,"mass":25.0},{"name":"UKB254X102X22","type":"UKB","h":254.0,"b":101.6,"tf":6.8,"tw":5.7,"r":7.6,"A_cm2":28.0,"mass":22.0},{"name":"UKB203X133X30","type":"UKB","h":206.8,"b":133.9,"tf":9.6,"tw":6.4,"r":7.6,"A_cm2":38.2,"mass":30.0},{"name":"UKB203X133X25","type":"UKB","h":203.2,"b":133.2,"tf":7.8,"tw":5.7,"r":7.6,"A_cm2":32.0,"mass":25.0},{"name":"UKB203X102X23","type":"UKB","h":203.2,"b":101.8,"tf":9.3,"tw":5.4,"r":7.6,"A_cm2":29.4,"mass":23.0},{"name":"UKB178X102X19","type":"UKB","h":177.8,"b":101.2,"tf":7.9,"tw":4.8,"r":7.6,"A_cm2":24.3,"mass":19.0},{"name":"UKB152X89X16","type":"UKB","h":152.4,"b":88.7,"tf":7.7,"tw":4.5,"r":7.6,"A_cm2":20.3,"mass":16.0},{"name":"UKB127X76X13","type":"UKB","h":127.0,"b":76.0,"tf":7.6,"tw":4.0,"r":7.6,"A_cm2":16.5,"mass":13.0},{"name":"UKC356X406X634","type":"UKC","h":474.6,"b":424.0,"tf":77.0,"tw":47.6,"r":15.2,"A_cm2":808.0,"mass":634.0},{"name":"UKC356X406X551","type":"UKC","h":455.6,"b":418.5,"tf":67.5,"tw":42.1,"r":15.2,"A_cm2":702.0,"mass":551.0},{"name":"UKC356X406X467","type":"UKC","h":436.6,"b":412.2,"tf":58.0,"tw":35.8,"r":15.2,"A_cm2":595.0,"mass":467.0},{"name":"UKC356X406X393","type":"UKC","h":419.0,"b":407.0,"tf":49.2,"tw":30.6,"r":15.2,"A_cm2":501.0,"mass":393.0},{"name":"UKC356X406X340","type":"UKC","h":406.4,"b":403.0,"tf":42.9,"tw":26.6,"r":15.2,"A_cm2":433.0,"mass":340.0},{"name":"UKC356X406X287","type":"UKC","h":393.6,"b":399.0,"tf":36.5,"tw":22.6,"r":15.2,"A_cm2":366.0,"mass":287.0},{"name":"UKC356X406X235","type":"UKC","h":381.0,"b":394.8,"tf":30.2,"tw":18.4,"r":15.2,"A_cm2":299.0,"mass":235.0},{"name":"UKC356X368X202","type":"UKC","h":374.6,"b":374.7,"tf":27.0,"tw":16.5,"r":15.2,"A_cm2":257.0,"mass":202.0},{"name":"UKC356X368X177","type":"UKC","h":368.2,"b":372.6,"tf":23.8,"tw":14.4,"r":15.2,"A_cm2":226.0,"mass":177.0},{"name":"UKC356X368X153","type":"UKC","h":362.0,"b":370.5,"tf":20.7,"tw":12.3,"r":15.2,"A_cm2":195.0,"mass":153.0},{"name":"UKC356X368X129","type":"UKC","h":355.6,"b":368.6,"tf":17.5,"tw":10.4,"r":15.2,"A_cm2":164.0,"mass":129.0},{"name":"UKC305X305X283","type":"UKC","h":365.3,"b":322.2,"tf":44.1,"tw":26.8,"r":15.2,"A_cm2":360.0,"mass":283.0},{"name":"UKC305X305X240","type":"UKC","h":352.5,"b":318.4,"tf":37.7,"tw":23.0,"r":15.2,"A_cm2":306.0,"mass":240.0},{"name":"UKC305X305X198","type":"UKC","h":339.9,"b":314.5,"tf":31.4,"tw":19.1,"r":15.2,"A_cm2":252.0,"mass":198.0},{"name":"UKC305X305X158","type":"UKC","h":327.1,"b":311.2,"tf":25.0,"tw":15.8,"r":15.2,"A_cm2":201.0,"mass":158.0},{"name":"UKC305X305X137","type":"UKC","h":320.5,"b":309.2,"tf":21.7,"tw":13.8,"r":15.2,"A_cm2":174.0,"mass":137.0},{"name":"UKC305X305X118","type":"UKC","h":314.5,"b":307.4,"tf":18.7,"tw":12.0,"r":15.2,"A_cm2":150.0,"mass":118.0},{"name":"UKC305X305X97","type":"UKC","h":307.9,"b":305.3,"tf":15.4,"tw":9.9,"r":15.2,"A_cm2":123.0,"mass":97.0},{"name":"UKC254X254X167","type":"UKC","h":289.1,"b":265.2,"tf":31.7,"tw":19.2,"r":12.7,"A_cm2":213.0,"mass":167.0},{"name":"UKC254X254X132","type":"UKC","h":276.3,"b":261.3,"tf":25.3,"tw":15.3,"r":12.7,"A_cm2":168.0,"mass":132.0},{"name":"UKC254X254X107","type":"UKC","h":266.7,"b":258.8,"tf":20.5,"tw":12.8,"r":12.7,"A_cm2":136.0,"mass":107.0},{"name":"UKC254X254X89","type":"UKC","h":260.3,"b":256.3,"tf":17.3,"tw":10.3,"r":12.7,"A_cm2":113.0,"mass":89.0},{"name":"UKC254X254X73","type":"UKC","h":254.1,"b":254.6,"tf":14.2,"tw":8.6,"r":12.7,"A_cm2":93.1,"mass":73.0},{"name":"UKC203X203X127","type":"UKC","h":241.4,"b":213.9,"tf":30.1,"tw":18.1,"r":10.2,"A_cm2":162.0,"mass":127.0},{"name":"UKC203X203X113","type":"UKC","h":235.0,"b":212.1,"tf":26.9,"tw":16.3,"r":10.2,"A_cm2":145.0,"mass":113.0},{"name":"UKC203X203X100","type":"UKC","h":228.6,"b":210.3,"tf":23.7,"tw":14.5,"r":10.2,"A_cm2":127.0,"mass":100.0},{"name":"UKC203X203X86","type":"UKC","h":222.2,"b":209.1,"tf":20.5,"tw":12.7,"r":10.2,"A_cm2":110.0,"mass":86.0},{"name":"UKC203X203X71","type":"UKC","h":215.8,"b":206.4,"tf":17.3,"tw":10.0,"r":10.2,"A_cm2":90.0,"mass":71.0},{"name":"UKC203X203X60","type":"UKC","h":209.6,"b":205.8,"tf":14.2,"tw":9.4,"r":10.2,"A_cm2":76.4,"mass":60.0},{"name":"UKC203X203X52","type":"UKC","h":206.2,"b":204.3,"tf":12.5,"tw":7.9,"r":10.2,"A_cm2":66.0,"mass":52.0},{"name":"UKC203X203X46","type":"UKC","h":203.2,"b":203.6,"tf":11.0,"tw":7.2,"r":10.2,"A_cm2":58.7,"mass":46.0},{"name":"UKC152X152X51","type":"UKC","h":170.2,"b":157.4,"tf":15.7,"tw":11.0,"r":7.6,"A_cm2":65.0,"mass":51.0},{"name":"UKC152X152X44","type":"UKC","h":166.0,"b":155.9,"tf":13.6,"tw":9.5,"r":7.6,"A_cm2":56.1,"mass":44.0},{"name":"UKC152X152X37","type":"UKC","h":161.8,"b":154.4,"tf":11.5,"tw":8.0,"r":7.6,"A_cm2":47.0,"mass":37.0},{"name":"UKC152X152X30","type":"UKC","h":157.6,"b":152.9,"tf":9.4,"tw":6.5,"r":7.6,"A_cm2":38.3,"mass":30.0},{"name":"UKC152X152X23","type":"UKC","h":152.4,"b":152.2,"tf":6.8,"tw":5.8,"r":7.6,"A_cm2":29.0,"mass":23.0},{"name":"UKBP356X368X174","type":"UKB","h":361.4,"b":378.5,"tf":20.4,"tw":20.3,"r":15.2,"A_cm2":221.0,"mass":174.0},{"name":"UKBP356X368X152","type":"UKB","h":356.4,"b":376.0,"tf":17.9,"tw":17.8,"r":15.2,"A_cm2":194.0,"mass":152.0},{"name":"UKBP356X368X133","type":"UKB","h":352.0,"b":373.8,"tf":15.7,"tw":15.6,"r":15.2,"A_cm2":169.0,"mass":133.0},{"name":"UKBP356X368X109","type":"UKB","h":346.4,"b":371.0,"tf":12.9,"tw":12.8,"r":15.2,"A_cm2":139.0,"mass":109.0},{"name":"UKBP305X305X223","type":"UKB","h":337.9,"b":325.7,"tf":30.4,"tw":30.3,"r":15.2,"A_cm2":284.0,"mass":223.0},{"name":"UKBP305X305X186","type":"UKB","h":328.3,"b":320.9,"tf":25.6,"tw":25.5,"r":15.2,"A_cm2":237.0,"mass":186.0},{"name":"UKBP305X305X149","type":"UKB","h":318.5,"b":316.0,"tf":20.7,"tw":20.6,"r":15.2,"A_cm2":190.0,"mass":149.0},{"name":"UKBP305X305X126","type":"UKB","h":312.3,"b":312.9,"tf":17.6,"tw":17.5,"r":15.2,"A_cm2":161.0,"mass":126.0},{"name":"UKBP305X305X110","type":"UKB","h":307.9,"b":310.7,"tf":15.4,"tw":15.3,"r":15.2,"A_cm2":140.0,"mass":110.0},{"name":"UKBP305X305X95","type":"UKB","h":303.7,"b":308.7,"tf":13.3,"tw":13.3,"r":15.2,"A_cm2":121.0,"mass":95.0},{"name":"UKBP305X305X88","type":"UKB","h":301.7,"b":307.8,"tf":12.3,"tw":12.4,"r":15.2,"A_cm2":112.0,"mass":88.0},{"name":"UKBP305X305X79","type":"UKB","h":299.3,"b":306.4,"tf":11.1,"tw":11.0,"r":15.2,"A_cm2":100.0,"mass":79.0},{"name":"UKBP254X254X85","type":"UKB","h":254.3,"b":260.4,"tf":14.3,"tw":14.4,"r":12.7,"A_cm2":108.0,"mass":85.0},{"name":"UKBP254X254X71","type":"UKB","h":249.7,"b":258.0,"tf":12.0,"tw":12.0,"r":12.7,"A_cm2":90.4,"mass":71.0},{"name":"UKBP254X254X63","type":"UKB","h":247.1,"b":256.6,"tf":10.7,"tw":10.6,"r":12.7,"A_cm2":80.2,"mass":63.0},{"name":"UKBP203X203X54","type":"UKB","h":204.0,"b":207.7,"tf":11.4,"tw":11.3,"r":10.2,"A_cm2":68.7,"mass":54.0},{"name":"UKBP203X203X45","type":"UKB","h":200.2,"b":205.9,"tf":9.5,"tw":9.5,"r":10.2,"A_cm2":57.2,"mass":45.0}];
+
+/* ---------- §5.2 Bolt table ------------------------------------------- */
+const BOLTS = {
+  M12:{d:12,d0:14,washer:24,spanner:30},
+  M16:{d:16,d0:18,washer:30,spanner:35},
+  M20:{d:20,d0:22,washer:37,spanner:40},
+  M24:{d:24,d0:26,washer:44,spanner:50},
+  M30:{d:30,d0:33,washer:56,spanner:60},
+};
+const BOLT_SIZES = Object.keys(BOLTS);
+const BOLT_GRADES = ["4.6","8.8","10.9"];
+
+/* ---------- §5.5 Anchor sizes ----------------------------------------- */
+const ANCHOR_SIZES = ["M12","M16","M20","M24","M30","M36"];
+const ANCHOR_D = {M12:12,M16:16,M20:20,M24:24,M30:30,M36:36};
+const ANCHOR_TYPES = [
+  "cast-in headed","cast-in J/L-bolt","post-installed chemical",
+  "post-installed mechanical","headed studs",
+];
+
+/* ---------- §2 Connection matrix metadata ----------------------------- */
+const FAMILIES = [
+  {key:"BB", label:"Beam → Beam", ids:["BB-FIN","BB-EP","BB-W"]},
+  {key:"BC", label:"Beam → Column", ids:["BC-FIN","BC-EP","BC-W"]},
+  {key:"BCON", label:"Beam → Concrete", ids:["BCON-FIN","BCON-W"]},
+  {key:"CCON", label:"Column → Concrete", ids:["CCON-BP","CCON-BP-S"]},
+];
+const CONN = {
+  "BB-FIN":{name:"Fin plate", vA:"Elevation", vB:"Section"},
+  "BB-EP":{name:"Bolted end plate", vA:"Elevation", vB:"Section"},
+  "BB-W":{name:"Direct welded", vA:"Elevation", vB:"Section"},
+  "BC-FIN":{name:"Fin plate to column", vA:"Elevation", vB:"Plan"},
+  "BC-EP":{name:"End plate to column", vA:"Elevation", vB:"Plan"},
+  "BC-W":{name:"Welded moment", vA:"Elevation", vB:"Plan"},
+  "BCON-FIN":{name:"Embedded plate + fin", vA:"Elevation", vB:"Plan / plate face"},
+  "BCON-W":{name:"Embedded plate + welded", vA:"Elevation", vB:"Plan / plate face"},
+  "CCON-BP":{name:"Base plate", vA:"Elevation", vB:"Plan"},
+  "CCON-BP-S":{name:"Base plate + gussets", vA:"Elevation", vB:"Plan"},
+};
+
+/* px<->mm print convention: 1 CSS px = 1/96 inch = 0.2645833 mm on paper.
+   Drawing scale ratio n (1:n) = realMM / paperMM = 1 / (pxPerMM * 0.2645833) */
+const MM_PER_PX = 25.4/96; // 0.2645833
+
+/* =====================================================================
+   §4 Custom section + section helpers
+   ===================================================================== */
+function secByName(name){
+  if(name==="CUSTOM") return null;
+  return SECTIONS.find(s=>s.name===name) || null;
+}
+// Resolve a member slot to the 5 numbers everything downstream consumes.
+function resolveSec(name, custom){
+  if(name==="CUSTOM"){
+    const c = custom||{};
+    return {name:"Custom I-section", type:"CUSTOM",
+      h:+c.h||400, b:+c.b||180, tf:+c.tf||12, tw:+c.tw||8, r:+c.r||10,
+      A_cm2:null, mass:null, custom:true};
+  }
+  const s = secByName(name);
+  return s ? Object.assign({}, s) : resolveSec("CUSTOM", custom);
+}
+// Derived geometry §4
+function clearDepth(s){ return s.h - 2*s.tf - 2*s.r; }        // d, flat web zone
+function serialSize(s){ // for sorting: leading "DDDxWWW"
+  const m = /(\d+)X(\d+)/i.exec(s.name||""); return m?[+m[1],+m[2]]:[0,0];
+}
+function sectionsByType(t){
+  return SECTIONS.filter(s=>s.type===t).sort((a,b)=>{
+    const [da,wa]=serialSize(a),[db,wb]=serialSize(b);
+    return db-da || wb-wa || a.mass-b.mass;
+  });
+}
+
+/* =====================================================================
+   §5 / §8  Control registry — one descriptor per editable parameter.
+   The UI builds inputs from this; geometry & validation read state[key].
+   group: accordion section.  type: number|enum|section|bool.
+   ===================================================================== */
+const G = {MEM:"Members",PLATE:"Plate",BOLT:"Bolts",WELD:"Welds",ANC:"Anchors / Concrete",STIFF:"Stiffeners",GEOM:"Geometry"};
+const CONTROLS = {
+  // ---- members ----
+  secSec:{group:G.MEM,type:"section",def:"UKB533X210X92",label:"Supported member",kind:"beam"},
+  primSec:{group:G.MEM,type:"section",def:"UKB610X229X125",label:"Supporting member",kind:"beam"},
+  secCustom:{hidden:true,def:{h:533.1,b:209.3,tf:15.6,tw:10.1,r:12.7}},
+  primCustom:{hidden:true,def:{h:612.2,b:229.0,tf:19.6,tw:11.9,r:12.7}},
+  axis:{group:G.MEM,type:"enum",def:"major",opts:["major","minor"],label:"Column axis",hint:"major = to flange, minor = to web"},
+  // ---- bolts ----
+  bolt:{group:G.BOLT,type:"enum",def:"M20",opts:BOLT_SIZES,label:"Bolt size"},
+  boltGrade:{group:G.BOLT,type:"enum",def:"8.8",opts:BOLT_GRADES,label:"Grade"},
+  n1:{group:G.BOLT,type:"number",def:3,min:1,max:12,step:1,label:"Rows n₁ (vert)"},
+  n2:{group:G.BOLT,type:"number",def:1,min:1,max:3,step:1,label:"Cols n₂ (horiz)"},
+  p1:{group:G.BOLT,type:"number",def:70,min:20,max:400,step:5,label:"Pitch p₁ (vert c/c)"},
+  p2:{group:G.BOLT,type:"number",def:70,min:20,max:400,step:5,label:"Gauge p₂ (horiz c/c)"},
+  e1:{group:G.BOLT,type:"number",def:40,min:10,max:200,step:5,label:"End dist e₁ (plate)"},
+  e2:{group:G.BOLT,type:"number",def:40,min:10,max:200,step:5,label:"Edge dist e₂ (plate)"},
+  w:{group:G.BOLT,type:"number",def:90,min:50,max:300,step:5,label:"Cross-centres w (EP)"},
+  hole:{group:G.BOLT,type:"enum",def:"standard",opts:["standard","oversize"],label:"Hole type"},
+  // ---- plate ----
+  tp:{group:G.PLATE,type:"number",def:10,min:6,max:25,step:1,label:"Fin plate thk tₚ"},
+  hp:{group:G.PLATE,type:"number",def:0,min:0,max:2000,step:5,label:"Fin plate height hₚ",hint:"0 = auto"},
+  bp:{group:G.PLATE,type:"number",def:0,min:0,max:600,step:5,label:"Fin plate width bₚ",hint:"0 = auto"},
+  g:{group:G.PLATE,type:"number",def:10,min:0,max:30,step:1,label:"Gap g (end↔face)"},
+  tep:{group:G.PLATE,type:"number",def:10,min:8,max:40,step:1,label:"End plate thk"},
+  epMode:{group:G.PLATE,type:"enum",def:"flush",opts:["flush","extended"],label:"End plate type"},
+  T:{group:G.PLATE,type:"number",def:25,min:12,max:60,step:1,label:"Base/embed plate T"},
+  Bp:{group:G.PLATE,type:"number",def:0,min:0,max:1500,step:10,label:"Plate B (width)",hint:"0 = auto"},
+  Lp:{group:G.PLATE,type:"number",def:0,min:0,max:1500,step:10,label:"Plate L (depth)",hint:"0 = auto"},
+  grout:{group:G.PLATE,type:"number",def:30,min:0,max:75,step:5,label:"Grout thickness"},
+  // ---- notch (BB) ----
+  align:{group:G.GEOM,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Beam alignment",hint:"top = tops flush (typical floor); centre = mid-aligned"},
+  notchMode:{group:G.GEOM,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Notch"},
+  notchLen:{group:G.GEOM,type:"number",def:0,min:0,max:400,step:5,label:"Notch length",hint:"0 = auto"},
+  notchDep:{group:G.GEOM,type:"number",def:0,min:0,max:300,step:5,label:"Notch depth",hint:"0 = auto"},
+  // ---- welds ----
+  weldType:{group:G.WELD,type:"enum",def:"fillet",opts:["fillet","partial-pen butt","full-pen butt"],label:"Weld type"},
+  weldLeg:{group:G.WELD,type:"number",def:6,min:4,max:15,step:1,label:"Fillet leg s"},
+  // ---- stiffeners ----
+  ts:{group:G.STIFF,type:"number",def:10,min:6,max:25,step:1,label:"Stiffener thk tₛ"},
+  stiffHeight:{group:G.STIFF,type:"number",def:0,min:0,max:1500,step:10,label:"Gusset height",hint:"0 = auto"},
+  stiffLayout:{group:G.STIFF,type:"enum",def:"2",opts:["2","4"],label:"Gusset layout (sides)"},
+  doubler:{group:G.STIFF,type:"bool",def:false,label:"Column web doubler"},
+  doublerT:{group:G.STIFF,type:"number",def:8,min:6,max:20,step:1,label:"Doubler thk"},
+  // ---- anchors / concrete ----
+  anchorType:{group:G.ANC,type:"enum",def:"cast-in headed",opts:ANCHOR_TYPES,label:"Embedment type"},
+  anchorSize:{group:G.ANC,type:"enum",def:"M20",opts:ANCHOR_SIZES,label:"Anchor size"},
+  hef:{group:G.ANC,type:"number",def:0,min:50,max:600,step:10,label:"Embedment hₑf",hint:"0 = auto 12·d"},
+  na1:{group:G.ANC,type:"number",def:2,min:1,max:6,step:1,label:"Anchor rows"},
+  na2:{group:G.ANC,type:"number",def:2,min:1,max:6,step:1,label:"Anchor cols"},
+  sa1:{group:G.ANC,type:"number",def:0,min:0,max:1200,step:5,label:"Anchor spacing s₁",hint:"0 = auto"},
+  sa2:{group:G.ANC,type:"number",def:0,min:0,max:1200,step:5,label:"Anchor spacing s₂",hint:"0 = auto"},
+  ca:{group:G.ANC,type:"number",def:50,min:20,max:300,step:5,label:"Edge dist c (plate)"},
+  proj:{group:G.ANC,type:"number",def:60,min:20,max:200,step:5,label:"Projection above plate"},
+  concType:{group:G.ANC,type:"enum",def:"pedestal",opts:["pedestal","wall"],label:"Concrete element"},
+  concH:{group:G.ANC,type:"number",def:600,min:100,max:3000,step:50,label:"Pedestal/wall height"},
+  wallT:{group:G.ANC,type:"number",def:300,min:100,max:1000,step:10,label:"Wall thickness"},
+};
+
+/* Per-connection UI: ordered list of control keys (grouped automatically). */
+const SCHEMA = {
+  "BB-FIN":["secSec","primSec","align","notchMode","notchLen","notchDep","tp","hp","bp","g",
+            "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
+  "BB-EP":["secSec","primSec","align","notchMode","notchLen","notchDep","tep","g",
+           "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg"],
+  "BB-W":["secSec","primSec","align","notchMode","notchLen","notchDep","weldType","weldLeg","ts","stiffHeight"],
+  "BC-FIN":["secSec","primSec","axis","tp","hp","bp","g",
+            "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
+  "BC-EP":["secSec","primSec","axis","epMode","tep","g",
+           "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg"],
+  "BC-W":["secSec","primSec","axis","weldType","weldLeg","ts","doubler","doublerT"],
+  "BCON-FIN":["secSec","concType","wallT","concH","T","Bp","Lp","tp","hp","bp","g",
+              "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg",
+              "anchorType","anchorSize","hef","na1","na2","sa1","sa2","ca","proj"],
+  "BCON-W":["secSec","concType","wallT","concH","T","Bp","Lp","g","weldType","weldLeg",
+            "anchorType","anchorSize","hef","na1","na2","sa1","sa2","ca","proj"],
+  "CCON-BP":["primSec","concType","concH","T","Bp","Lp","grout","weldType","weldLeg",
+             "anchorType","anchorSize","hef","na1","na2","sa1","sa2","ca","proj"],
+  "CCON-BP-S":["primSec","concType","concH","T","Bp","Lp","grout","ts","stiffLayout","stiffHeight",
+               "weldType","weldLeg","anchorType","anchorSize","hef","na1","na2","sa1","sa2","ca","proj"],
+};
+// Connection-specific default overrides (applied on top of CONTROLS.def)
+const DEFOVR = {
+  "BB-EP":{tep:10,n1:4,p1:70},
+  "BC-FIN":{primSec:"UKC305X305X137"},
+  "BC-EP":{primSec:"UKC305X305X137",tep:15,n1:4,epMode:"extended"},
+  "BC-W":{primSec:"UKC305X305X137",weldType:"full-pen butt",secSec:"UKB457X191X74"},
+  "BB-W":{weldType:"fillet"},
+  "BCON-FIN":{secSec:"UKB406X178X60",T:25},
+  "BCON-W":{secSec:"UKB406X178X60",weldType:"full-pen butt",T:25},
+  "CCON-BP":{primSec:"UKC254X254X89",T:30,Bp:0,Lp:0},
+  "CCON-BP-S":{primSec:"UKC254X254X89",T:30,anchorSize:"M24",na1:2,na2:2,hef:300,grout:40,stiffLayout:"4"},
+};
+
+/* which member slots act as columns (for default picker grouping) */
+function slotKind(conn, key){
+  if(key==="primSec"){
+    if(conn.startsWith("BC")||conn.startsWith("CCON")) return "col";
+    return "beam";
+  }
+  if(key==="secSec") return "beam";
+  return "beam";
+}
+
+/* =====================================================================
+   §3  STATE — single serialisable source of truth
+   ===================================================================== */
+function defaultState(conn){
+  conn = conn||"BB-FIN";
+  const st = {conn, grade:"S355", drawScale:"auto", view:"both",
+              showParamTable:false, theme:document.body.classList.contains("dark")?"dark":"light"};
+  // every control gets its default so JSON is complete & round-trips
+  for(const k in CONTROLS){
+    const c = CONTROLS[k];
+    st[k] = (c.def && typeof c.def==="object") ? JSON.parse(JSON.stringify(c.def)) : c.def;
+  }
+  const ovr = DEFOVR[conn]||{};
+  for(const k in ovr) st[k] = ovr[k];
+  return st;
+}
+let state = defaultState("BB-FIN");
+
+// Is a control part of the active connection's UI?
+function active(key){ return (SCHEMA[state.conn]||[]).includes(key); }
+
+/* resolve the two member slots for the active connection */
+function members(){
+  const sec = resolveSec(state.secSec, state.secCustom);
+  const prim = resolveSec(state.primSec, state.primCustom);
+  return {sec, prim};
+}
+
+/* bolt + anchor resolved props */
+function boltProps(){ return BOLTS[state.bolt]||BOLTS.M20; }
+function holeDia(){ const b=boltProps(); return state.hole==="oversize"? b.d+ (b.d>=24?8:6) : b.d0; }
+function anchorDia(){ return ANCHOR_D[state.anchorSize]||20; }
+function hefVal(){ return state.hef>0 ? state.hef : Math.round(12*anchorDia()/5)*5; }
+
+/* =====================================================================
+   §3 / §7  Drawing engine
+   Geometry fns return arrays of primitives in REAL mm coords (y-up).
+   A single renderer maps mm -> drawing units (du≈px) at a uniform scale.
+   ===================================================================== */
+const SVGNS = "http://www.w3.org/2000/svg";
+// ---- primitive constructors (short, geometry code stays terse) ----
+const Pr = {
+  l:(x1,y1,x2,y2,c="out",o={})=>({t:"l",a:[x1,y1,x2,y2],c,...o}),
+  r:(x,y,w,h,c="plate",o={})=>({t:"r",x,y,w,h,c,...o}),
+  c:(cx,cy,r,c="bolt",o={})=>({t:"c",cx,cy,r,c,...o}),
+  poly:(pts,c="out",o={})=>({t:"p",pts,c,...o}),
+  path:(segs,c="out",o={})=>({t:"pa",segs,c,...o}),
+  hatch:(pts,kind="steel",o={})=>({t:"h",pts,kind,...o}),
+  txt:(x,y,s,o={})=>({t:"t",x,y,s,size:11,anchor:"middle",c:"label",...o}),
+  dim:(dir,x1,y1,x2,y2,off,text,o={})=>({t:"d",dir,x1,y1,x2,y2,off,text,...o}),
+  weld:(x,y,lx,ly,o={})=>({t:"w",x,y,lx,ly,kind:"fillet",size:6,both:true,text:"",...o}),
+};
+// style table: stroke/width(du)/fill/dash per class
+const STY = {
+  out:   {s:"var(--steel)", w:1.7, f:"none"},
+  plate: {s:"var(--plate)", w:1.3, f:"none"},
+  bolt:  {s:"var(--bolt)",  w:1.0, f:"none"},
+  weld:  {s:"var(--weld)",  w:1.0, f:"var(--weld)"},
+  dim:   {s:"var(--dim)",   w:0.7, f:"var(--dim)"},
+  hidden:{s:"var(--steel)", w:0.9, f:"none", dash:"6,4"},
+  center:{s:"var(--dim)",   w:0.6, f:"none", dash:"9,3,2,3"},
+  thin:  {s:"var(--muted)", w:0.6, f:"none"},
+  fillonly:{s:"none",       w:0,   f:"none"},
+  label: {s:"none",         w:0,   f:"var(--ink)"},
+};
+
+/* ---- shape helpers: return arrays of primitives in mm (y-up) ---- */
+// I cross-section outline (square inner corners), centred at (cx,cy). web vertical.
+function iSectionPts(cx,cy,h,b,tf,tw){
+  const X=v=>cx+v, Y=v=>cy+v, hh=h/2, hb=b/2, ww=tw/2, wi=hh-tf;
+  return [
+    [X(-hb),Y(hh)],[X(hb),Y(hh)],[X(hb),Y(wi)],[X(ww),Y(wi)],
+    [X(ww),Y(-wi)],[X(hb),Y(-wi)],[X(hb),Y(-hh)],[X(-hb),Y(-hh)],
+    [X(-hb),Y(-wi)],[X(-ww),Y(-wi)],[X(-ww),Y(wi)],[X(-hb),Y(wi)],
+  ];
+}
+// I-section, web HORIZONTAL (flanges vertical) — used when a beam axis is horizontal in plan
+function iSectionPtsH(cx,cy,h,b,tf,tw){
+  // rotate the vertical one 90°: swap roles
+  const X=v=>cx+v, Y=v=>cy+v, hh=h/2, hb=b/2, ww=tw/2, wi=hh-tf;
+  return [
+    [X(hh),Y(-hb)],[X(hh),Y(hb)],[X(wi),Y(hb)],[X(wi),Y(ww)],
+    [X(-wi),Y(ww)],[X(-wi),Y(hb)],[X(-hh),Y(hb)],[X(-hh),Y(-hb)],
+    [X(-wi),Y(-hb)],[X(-wi),Y(-ww)],[X(wi),Y(-ww)],[X(wi),Y(-hb)],
+  ];
+}
+// Beam in side elevation (web face to viewer): outer rect + 2 inner flange lines.
+// origin = (x0,yc) left end at mid-height; runs +x by len, depth h.
+function beamElevH(x0,yc,len,h,tf,cls="out"){
+  const t=h/2, x1=x0+len, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
+  out.push(Pr.l(x0,top,x1,top,cls,{w:1.9}));        // top flange outer
+  out.push(Pr.l(x0,bot,x1,bot,cls,{w:1.9}));        // bottom flange outer
+  out.push(Pr.l(x0,top,x0,bot,cls,{w:1.9}));        // near end face
+  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.2}));  // top flange inner
+  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.2}));  // bottom flange inner
+  out.push(Pr.path([["M",x1,top],["L",x1,yc+h*0.16],["L",x1-z,yc+h*0.08],
+                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.4})); // far-end break
+  return out;
+}
+// Beam in elevation shown as a finite SEGMENT with break (cut) lines at both ends —
+// reads as a continuous UB/UC: top flange = 2 lines, bottom flange = 2 lines, broken ends.
+function beamElevBreak(xc,len,yc,h,tf,cls="out"){
+  const x0=xc-len/2, x1=xc+len/2, t=h/2, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
+  out.push(Pr.l(x0,top,x1,top,cls));            // top flange outer
+  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));// top flange inner
+  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));// bottom flange inner
+  out.push(Pr.l(x0,bot,x1,bot,cls));            // bottom flange outer
+  for(const xe of [x0,x1])                       // break line (zig) at each cut end
+    out.push(Pr.path([["M",xe,top],["L",xe,yc+h*0.16],["L",xe-z,yc+h*0.08],
+                      ["L",xe+z,yc-h*0.08],["L",xe,yc-h*0.16],["L",xe,bot]],cls,{w:1.0}));
+  return out;
+}
+// bolt holes in elevation: grid n1(rows,vert) x n2(cols,horiz) centred at (cx,cy)
+function boltGridElev(cx,cy,n1,n2,p1,p2,d0,tag){
+  const out=[], cts=[]; const rr=d0/2;
+  const y0 = cy + (n1-1)*p1/2, x0 = cx - (n2-1)*p2/2;
+  for(let i=0;i<n1;i++)for(let j=0;j<n2;j++){
+    const x=x0+j*p2, y=y0-i*p1; cts.push([x,y]);
+    out.push(Pr.c(x,y,rr,"bolt",tag?{tag}:{}));
+    const k=rr*0.55;
+    out.push(Pr.l(x-k,y,x+k,y,"bolt",{w:0.8}));
+    out.push(Pr.l(x,y-k,x,y+k,"bolt",{w:0.8}));
+  }
+  return {prims:out, centres:cts};
+}
+// bolt in side/section view passing horizontally through plies of total thickness g
+// head on -x side (support) optional, nut+washer on +x. drawn to scale, simplified hex.
+function boltSide(x, y, gripL, headSide, d, washer, opts={}){
+  const out=[], dh=d*0.6, hw=washer*0.5, hL=d*0.8, nL=d*0.8, wL=d*0.18;
+  // shank across grip
+  const x0 = headSide==="left" ? x : x-gripL;
+  out.push(Pr.l(x0, y-d/2, x0+gripL, y-d/2, "bolt"));
+  out.push(Pr.l(x0, y+d/2, x0+gripL, y+d/2, "bolt"));
+  // head end (left) & nut end (right) — place outside grip
+  const headX = (headSide==="left") ? x0 : x0+gripL;
+  const dir = (headSide==="left") ? -1 : 1;
+  // washer
+  out.push(Pr.r(headX, y-hw, dir*wL, 2*hw, "bolt"));
+  // head/nut block (hex simplified as rect with chamfer lines)
+  const hx = headX + dir*wL;
+  out.push(Pr.r(hx, y-hw, dir*hL, 2*hw, "bolt"));
+  // far end (nut) on the opposite side
+  const farX = (headSide==="left") ? x0+gripL : x0;
+  const fdir = -dir;
+  out.push(Pr.r(farX, y-hw, fdir*wL, 2*hw, "bolt"));
+  out.push(Pr.r(farX+fdir*wL, y-hw, fdir*nL, 2*hw, "bolt"));
+  return out;
+}
+// small filled fillet-weld triangles along an edge (x1,y1)->(x2,y2), leg, side(+1/-1 normal)
+function weldRun(x1,y1,x2,y2,leg,side=1,c="weld"){
+  const out=[], dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy); if(L<1) return out;
+  const ux=dx/L, uy=dy/L, nx=-uy*side, ny=ux*side;
+  const step=Math.max(leg*1.6, L/Math.max(2,Math.round(L/(leg*1.8))));
+  for(let s=0;s+leg*0.1<=L+0.1;s+=step){
+    const bx=x1+ux*s, by=y1+uy*s;
+    const p2=[bx+ux*leg, by+uy*leg], p3=[bx+nx*leg, by+ny*leg];
+    out.push(Pr.poly([[bx,by],p2,p3],c,{close:true})); // fill from STY[c] (var(--weld))
+  }
+  return out;
+}
+
+/* ---------- bounding box over primitives (mm) ---------- */
+function bboxOf(prims){
+  let mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9; const A=(x,y)=>{if(x<mnx)mnx=x;if(y<mny)mny=y;if(x>mxx)mxx=x;if(y>mxy)mxy=y;};
+  for(const p of prims){
+    switch(p.t){
+      case "l": A(p.a[0],p.a[1]);A(p.a[2],p.a[3]);break;
+      case "r": A(p.x,p.y);A(p.x+p.w,p.y+p.h);break;
+      case "c": A(p.cx-p.r,p.cy-p.r);A(p.cx+p.r,p.cy+p.r);break;
+      case "p": case "h": p.pts.forEach(q=>A(q[0],q[1]));break;
+      case "pa": p.segs.forEach(s=>{if(s[0]==="M"||s[0]==="L")A(s[1],s[2]);if(s[0]==="A")A(s[2],s[3]);});break;
+      case "t": A(p.x,p.y);break;
+      case "w": A(p.x,p.y);A(p.lx,p.ly);break;
+      case "d":{ const o=p.off||0;
+        if(p.dir==="h"){A(p.x1,p.y1);A(p.x2,p.y2);A(p.x1,p.y1+o);A(p.x2,p.y1+o);}
+        else{A(p.x1,p.y1);A(p.x2,p.y2);A(p.x1+o,p.y1);A(p.x1+o,p.y2);} break;}
+    }
+  }
+  if(mnx>mxx){mnx=0;mny=0;mxx=1;mxy=1;}
+  return {minx:mnx,miny:mny,maxx:mxx,maxy:mxy,w:Math.max(mxx-mnx,1),h:Math.max(mxy-mny,1)};
+}
+
+function svgel(name,attrs,parent){
+  const e=document.createElementNS(SVGNS,name);
+  for(const k in attrs) if(attrs[k]!=null) e.setAttribute(k,attrs[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function applyStyle(node,cls,o,redSet){
+  const st=STY[cls]||STY.out; const red = o&&o.tag&&redSet&&redSet.has(o.tag);
+  node.setAttribute("stroke", red?"var(--err)":st.s);
+  node.setAttribute("stroke-width", (o&&o.w!=null?o.w:st.w));
+  node.setAttribute("fill", o&&o.fill!=null?(red?"var(--err)":o.fill):st.f);
+  const dash = o&&o.dash!=null?o.dash:st.dash;
+  if(dash) node.setAttribute("stroke-dasharray",dash);
+  node.setAttribute("vector-effect","non-scaling-stroke");
+  return node;
+}
+
+/* hatch pattern defs (du space, tile-independent of transform) */
+function ensureDefs(svg){
+  let defs=svg.querySelector("defs"); if(defs) return defs;
+  defs=svgel("defs",{},svg);
+  const mk=(id,inner)=>{const p=svgel("pattern",{id,patternUnits:"userSpaceOnUse",width:inner.w,height:inner.h,patternTransform:inner.tr||""},defs);inner.draw(p);return p;};
+  mk("hatchSteel",{w:7,h:7,tr:"rotate(0)",draw:p=>svgel("path",{d:"M0,7 L7,0",stroke:"var(--steel)","stroke-width":0.6},p)});
+  mk("hatchConc",{w:14,h:14,draw:p=>{
+     svgel("path",{d:"M0,14 L14,0 M-3,3 L3,-3 M11,17 L17,11",stroke:"var(--muted)","stroke-width":0.5},p);
+     svgel("circle",{cx:4,cy:9,r:0.9,fill:"var(--muted)"},p);
+     svgel("circle",{cx:10,cy:4,r:0.7,fill:"var(--muted)"},p);}});
+  mk("hatchGrout",{w:9,h:9,draw:p=>{
+     for(const c of [[2,2],[6,4],[3,7],[7,8],[5,1]]) svgel("circle",{cx:c[0],cy:c[1],r:0.6,fill:"var(--muted)"},p);}});
+  // arrow marker not used (we draw filled triangles manually)
+  return defs;
+}
+
+/* draw a dimension (chain segment) in du space; text/arrows fixed size */
+function drawDim(g,p,T,redSet){
+  const red = p.tag && redSet && redSet.has(p.tag);
+  const col = red? "var(--err)" : "var(--dim)";
+  const A=7, ext=0; // arrow length du
+  const mkline=(x1,y1,x2,y2,w=0.7,dash)=>svgel("line",{x1,y1,x2,y2,stroke:col,"stroke-width":w,"stroke-dasharray":dash||null,"vector-effect":"non-scaling-stroke"},g);
+  const arrow=(x,y,ax,ay)=>{ // arrowhead at (x,y) pointing along (ax,ay) unit
+    const w=2.4; const bx=x-ax*A, by=y-ay*A, px=-ay, py=ax;
+    svgel("polygon",{points:`${x},${y} ${bx+px*w},${by+py*w} ${bx-px*w},${by-py*w}`,fill:col,stroke:"none"},g);
+  };
+  if(p.dir==="h"){
+    const yL=T.Y(p.y1+(p.off||0)), x1=T.X(p.x1), x2=T.X(p.x2), yb=T.Y(p.y1);
+    mkline(x1,yb,x1,yL,0.5); mkline(x2,yb,x2,yL,0.5);              // extension lines
+    mkline(x1,yL,x2,yL,0.7);                                       // dim line
+    const dir=Math.sign(x2-x1)||1; arrow(x1,yL,-dir,0); arrow(x2,yL,dir,0);
+    svgel("text",{x:(x1+x2)/2,y:yL-3,fill:col,"font-size":11,"text-anchor":"middle"},g).textContent=p.text;
+  }else{
+    const xL=T.X(p.x1+(p.off||0)), y1=T.Y(p.y1), y2=T.Y(p.y2), xb=T.X(p.x1);
+    mkline(xb,y1,xL,y1,0.5); mkline(xb,y2,xL,y2,0.5);
+    mkline(xL,y1,xL,y2,0.7);
+    const dir=Math.sign(y2-y1)||1; arrow(xL,y1,0,-dir); arrow(xL,y2,0,dir);
+    const ym=(y1+y2)/2; const tn=svgel("text",{x:xL-3,y:ym,fill:col,"font-size":11,"text-anchor":"middle",transform:`rotate(-90 ${xL-3} ${ym})`},g);
+    tn.textContent=p.text;
+  }
+}
+
+/* draw EN 22553-style weld symbol (schematic) in du space */
+function drawWeld(g,p,T){
+  const col="var(--weld)", x=T.X(p.x),y=T.Y(p.y), lx=T.X(p.lx),ly=T.Y(p.ly);
+  const refLen=46, side=Math.sign(p.lx-p.x)||1;
+  const ex=lx, ey=ly; // elbow
+  const rx=ex+side*refLen;
+  svgel("line",{x1:x,y1:y,x2:ex,y2:ey,stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g);
+  svgel("line",{x1:ex,y1:ey,x2:rx,y2:ey,stroke:col,"stroke-width":1,"vector-effect":"non-scaling-stroke"},g);
+  const sym=ex+side*10;
+  if(p.kind==="fillet"){
+    svgel("polygon",{points:`${sym},${ey} ${sym+side*9},${ey} ${sym},${ey-9}`,fill:col},g); // arrow-side flag (above)
+    if(p.both) svgel("polygon",{points:`${sym},${ey} ${sym+side*9},${ey} ${sym},${ey+9}`,fill:col},g);
+    if(p.size) svgel("text",{x:sym-side*3,y:ey-2,fill:col,"font-size":10,"text-anchor":side>0?"end":"start"},g).textContent=p.size;
+  }else{ // butt
+    const lbl = p.kind==="full-pen butt"?"FPBW":"PPBW";
+    svgel("path",{d:`M${sym},${ey-7} L${sym+side*7},${ey} L${sym},${ey+7}`,fill:"none",stroke:col,"stroke-width":1.2},g);
+    svgel("text",{x:sym+side*11,y:ey-2,fill:col,"font-size":9,"text-anchor":side>0?"start":"end"},g).textContent=lbl;
+  }
+  // weld-all-around / typ note
+  if(p.text) svgel("text",{x:rx+side*2,y:ey-2,fill:col,"font-size":9,"text-anchor":side>0?"start":"end"},g).textContent=p.text;
+}
+
+/* draw one primitive */
+function drawPrim(g,p,T,redSet){
+  switch(p.t){
+    case "l":{const n=svgel("line",{x1:T.X(p.a[0]),y1:T.Y(p.a[1]),x2:T.X(p.a[2]),y2:T.Y(p.a[3])},g);applyStyle(n,p.c,p,redSet);break;}
+    case "r":{const xL=Math.min(p.x,p.x+p.w),yT=Math.max(p.y,p.y+p.h);const n=svgel("rect",{x:T.X(xL),y:T.Y(yT),width:T.S(Math.abs(p.w)),height:T.S(Math.abs(p.h))},g);applyStyle(n,p.c,{tag:p.tag,fill:p.fill,dash:p.dash},redSet);break;}
+    case "c":{const n=svgel("circle",{cx:T.X(p.cx),cy:T.Y(p.cy),r:T.S(p.r)},g);applyStyle(n,p.c,p,redSet);break;}
+    case "p":{const pts=p.pts.map(q=>`${T.X(q[0])},${T.Y(q[1])}`).join(" ");const tag=p.close===false?"polyline":"polygon";const n=svgel(tag,{points:pts},g);applyStyle(n,p.c,p,redSet);break;}
+    case "h":{const pts=p.pts.map(q=>`${T.X(q[0])},${T.Y(q[1])}`).join(" ");const id=p.kind==="concrete"?"hatchConc":p.kind==="grout"?"hatchGrout":"hatchSteel";const n=svgel("polygon",{points:pts,fill:`url(#${id})`,stroke:p.edge===false?"none":"var(--steel)","stroke-width":p.edge===false?0:1.0,"vector-effect":"non-scaling-stroke"},g);break;}
+    case "pa":{let d="";for(const s of p.segs){if(s[0]==="M")d+=`M${T.X(s[1])},${T.Y(s[2])} `;else if(s[0]==="L")d+=`L${T.X(s[1])},${T.Y(s[2])} `;else if(s[0]==="A"){const r=T.S(s[1]);const sweep=s[4]?0:1;d+=`A${r},${r} 0 0 ${sweep} ${T.X(s[2])},${T.Y(s[3])} `;}else if(s[0]==="Z")d+="Z ";}const n=svgel("path",{d},g);applyStyle(n,p.c,p,redSet);break;}
+    case "t":{const red=p.tag&&redSet&&redSet.has(p.tag);const n=svgel("text",{x:T.X(p.x),y:T.Y(p.y),"font-size":p.size||11,"text-anchor":p.anchor||"middle",fill:red?"var(--err)":(p.c==="label"?"var(--ink)":STY[p.c]?STY[p.c].s:"var(--ink)"),"font-weight":p.weight||"normal"},g);if(p.dy)n.setAttribute("dy",p.dy);if(p.rot)n.setAttribute("transform",`rotate(${p.rot} ${T.X(p.x)} ${T.Y(p.y)})`);n.textContent=p.s;break;}
+    case "d":drawDim(g,p,T,redSet);break;
+    case "w":drawWeld(g,p,T);break;
+  }
+}
+
+/* render a view into an <svg>, returning the scale ratio used */
+function renderView(svg, prims, unifiedScale){
+  svg.innerHTML="";
+  ensureDefs(svg);
+  const W = svg.clientWidth || 880, H = 560;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+  const g = svgel("g",{},svg);
+  if(!prims.length) return {scale:unifiedScale||1, fit:1};
+  const bb=bboxOf(prims), pad=26;
+  const fit=Math.min((W-2*pad)/bb.w,(H-2*pad)/bb.h);
+  const scale=unifiedScale||fit;
+  const offx=(W-bb.w*scale)/2 - bb.minx*scale;
+  const offy=(H-bb.h*scale)/2 - bb.miny*scale;
+  const T={scale, X:mm=>offx+mm*scale, Y:mm=>H-(offy+mm*scale), S:mm=>mm*scale};
+  // draw order: hatch, then lines/shapes, then bolts/welds, then dims, then text
+  const order={h:0,r:1,p:1,pa:1,l:1,c:2,w:3,d:4,t:5};
+  const sorted=prims.map((p,i)=>[p,i]).sort((a,b)=>(order[a[0].t]-order[b[0].t])|| (a[1]-b[1]));
+  for(const [p] of sorted) drawPrim(g,p,T,RED);
+  return {scale, fit};
+}
+
+/* =====================================================================
+   §6.2 derived geometry helpers (shared by geometry + validation)
+   ===================================================================== */
+// supported-beam centroid offset relative to main-beam centroid (y=0)
+function alignYc(align, prim, sec){ if(align==="centre") return 0; const d=(prim.h-sec.h)/2; return align==="bottom"? -d : d; }
+function notchAuto(st, sec, prim){
+  const yc = alignYc(st.align||"top", prim, sec);
+  const len = st.notchLen>0 ? st.notchLen : Math.ceil((prim.b/2 - prim.tw/2 + 10)/5)*5;
+  const dep = st.notchDep>0 ? st.notchDep : Math.ceil((prim.tf + prim.r + 5)/5)*5;
+  const N = {len, dep};
+  let mode = st.notchMode;
+  if(mode==="auto"){
+    const pIn = prim.h/2 - prim.tf - prim.r;            // edge of main beam clear web zone
+    const topClash = (yc + sec.h/2) > pIn + 1, botClash = (yc - sec.h/2) < -pIn - 1;
+    if(topClash && botClash) return {top:N, bot:N, mode:"double", len, dep};
+    if(topClash) return {top:N, bot:null, mode:"single", len, dep};
+    if(botClash) return {top:null, bot:N, mode:"single", len, dep};
+    return {top:null, bot:null, mode:"none", len:0, dep:0};
+  }
+  if(mode==="none") return {top:null, bot:null, mode, len:0, dep:0};
+  if(mode==="single") return {top:N, bot:null, mode, len, dep};
+  return {top:N, bot:N, mode:"double", len, dep};
+}
+function finGeom(st){
+  const {sec,prim} = members(), b = boltProps();
+  const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*b.d);
+  const bp = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2;
+  const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
+  const yc = alignYc(st.align||"top", prim, sec);      // supported-beam framing offset
+  const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
+  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(la + j*st.p2);
+  return {sec, prim, b, la, bp, hp, yc, ys, xs, d0:holeDia()};
+}
+function epGeom(st){
+  const {sec,prim}=members(), b=boltProps();
+  const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
+  const yc = alignYc(st.align||"top", prim, sec);
+  const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
+  const bpw = st.w + 2*Math.max(st.e2, 1.5*b.d);       // end-plate width
+  return {sec, prim, b, hp, yc, ys, bpw, d0:holeDia()};
+}
+
+/* small builder utilities (mm) */
+function chainV(arr, x, off, ys, tags){
+  for(let i=0;i<ys.length-1;i++)
+    arr.push(Pr.dim("v", x, ys[i], x, ys[i+1], off, String(Math.round(Math.abs(ys[i+1]-ys[i]))), tags?{tag:tags}:{}));
+}
+function chainH(arr, y, off, xs, tags){
+  for(let i=0;i<xs.length-1;i++)
+    arr.push(Pr.dim("h", xs[i], y, xs[i+1], y, off, String(Math.round(Math.abs(xs[i+1]-xs[i]))), tags?{tag:tags}:{}));
+}
+function dimV(arr,x,y1,y2,off,text,tag){ arr.push(Pr.dim("v",x,y1,x,y2,off,text!=null?text:String(Math.round(Math.abs(y2-y1))),tag?{tag}:{})); }
+function dimH(arr,y,x1,x2,off,text,tag){ arr.push(Pr.dim("h",x1,y,x2,y,off,text!=null?text:String(Math.round(Math.abs(x2-x1))),tag?{tag}:{})); }
+function label(arr,x,y,lines,o={}){
+  lines=[].concat(lines);
+  lines.forEach((s,i)=>arr.push(Pr.txt(x,y - i*(o.lh||13)/ (o.sc||1),s,Object.assign({size:o.size||11,anchor:o.anchor||"start",c:"label",weight:o.weight||"normal",rot:o.rot||0,mm:true},o.extra))));
+}
+function plCallout(t,L,H,grade){ return `PL ${Math.round(t)} × ${Math.round(L)} × ${Math.round(H)}, ${grade}`; }
+function bCallout(n,size,grade,d0){ return `${n} No. ${size} Gr ${grade} in ${d0} dia holes`; }
+
+/* supported-beam side elevation with optional top/bottom copes (notch). */
+function beamElevNotched(x0, x1, yc, h, tf, notch, cls="out"){
+  const top=yc+h/2, bot=yc-h/2, r=10, z=Math.min(8,h*0.03), out=[];
+  const tN=notch&&notch.top, bN=notch&&notch.bot, segs=[];
+  segs.push(["M", x1, top]);                              // far-top (terminated by break line)
+  if(tN){ segs.push(["L", x0+tN.len, top]); segs.push(["L", x0+tN.len, top-tN.dep+r]);
+          segs.push(["A", r, x0+tN.len-r, top-tN.dep, false]); segs.push(["L", x0, top-tN.dep]); }
+  else  { segs.push(["L", x0, top]); }
+  if(bN){ segs.push(["L", x0, bot+bN.dep]); segs.push(["L", x0+bN.len-r, bot+bN.dep]);
+          segs.push(["A", r, x0+bN.len, bot+bN.dep-r, false]); segs.push(["L", x0+bN.len, bot]); }
+  else  { segs.push(["L", x0, bot]); }
+  segs.push(["L", x1, bot]);                              // bottom edge to far end (open)
+  out.push(Pr.path(segs, cls, {w:1.9}));                  // bold beam outline
+  // far-end break (cut) line — shows the beam continues; makes the elevation read as a beam
+  out.push(Pr.path([["M",x1,top],["L",x1,yc+h*0.16],["L",x1-z,yc+h*0.08],
+                    ["L",x1+z,yc-h*0.08],["L",x1,yc-h*0.16],["L",x1,bot]],cls,{w:1.4}));
+  const tfTop=top-tf, tfBot=bot+tf;                       // flange inner lines (=> 2 lines per flange)
+  out.push(Pr.l(tN?x0+tN.len:x0, tfTop, x1, tfTop, cls, {w:1.2}));
+  out.push(Pr.l(bN?x0+bN.len:x0, tfBot, x1, tfBot, cls, {w:1.2}));
+  return out;
+}
+
+/* =====================================================================
+   §3  GEOMETRY registry:  GEO[id](state) -> {A:[prims], B:[prims]}
+   pure functions, real mm coords.
+   ===================================================================== */
+const GEO = {};
+
+/* ---------------- BB-FIN : Beam-to-beam fin plate ------------------- */
+GEO["BB-FIN"] = function(st){
+  const A=[], B=[], fg=finGeom(st), {sec,prim,b,la,bp,hp,yc,ys,xs,d0}=fg;
+  const notch = notchAuto(st, sec, prim);
+  const g = st.g, Lsec = Math.max(sec.h*1.0, 360);
+  const bgx = la + (st.n2-1)*st.p2/2;               // bolt group centre x
+  const ftip = (prim.b - prim.tw)/2;                // main beam right flange tip (web right face at x=0)
+
+  /* ----- View A : MAIN beam SECTION + supported beam ELEVATION (bolts = holes) ----- */
+  // main/supporting beam shown as a cut I-section, web right face at x=0
+  const iP = iSectionPts(-prim.tw/2, 0, prim.h, prim.b, prim.tf, prim.tw);
+  A.push(Pr.hatch(iP,"steel",{edge:false})); A.push(Pr.poly(iP,"out"));
+  label(A, -(prim.b+prim.tw)/2-6, 0, prim.name+"  (main)", {anchor:"middle", rot:-90, weight:"bold"});
+  // fin plate welded to main web, projects right; supported beam frames in
+  A.push(Pr.r(0, yc-hp/2, bp, hp, "plate"));
+  A.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
+  A.push(Pr.weld(0, yc-hp/2+10, ftip+50, yc-hp/2-44, {kind:st.weldType, size:st.weldLeg, both:true, text:"typ."}));
+  A.push(...beamElevNotched(g, g+Lsec, yc, sec.h, sec.tf, notch, "out"));
+  const bg = boltGridElev(bgx, yc, st.n1, st.n2, st.p1, st.p2, d0, "bolts"); A.push(...bg.prims);
+  // dimensions
+  chainV(A, la, -((prim.b+prim.tw)/2 + 32 + la), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(A, g+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
+  dimH(A, yc-sec.h/2-26, 0, g, -20, String(g), "gap");
+  if(st.n2>1) chainH(A, yc+hp/2+22, 18, xs, "p2");
+  if(notch.top){ dimH(A, yc+sec.h/2+18, g, g+notch.top.len, 16, String(notch.top.len), "notch");
+                 dimV(A, g+notch.top.len+8, yc+sec.h/2, yc+sec.h/2-notch.top.dep, 22, String(notch.top.dep), "notch"); }
+  label(A, g+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)", {anchor:"middle", weight:"bold"});
+  label(A, bp+12, yc-hp/2-6, [plCallout(st.tp,bp,hp,st.grade),
+        bCallout(st.n1*st.n2, st.bolt, st.boltGrade, d0)], {lh:14});
+
+  /* ----- View B : MAIN beam ELEVATION + supported beam SECTION + bolt side-views ----- */
+  const scx = st.tp + sec.tw/2;
+  const Lmain = Math.max(sec.b + 300, 440);
+  B.push(...beamElevBreak(scx, Lmain, 0, prim.h, prim.tf, "out"));     // main beam in elevation (broken segment)
+  // fin plate seen edge-on at main web near face
+  B.push(Pr.hatch([[0,yc-hp/2],[st.tp,yc-hp/2],[st.tp,yc+hp/2],[0,yc+hp/2]],"steel",{edge:false}));
+  B.push(Pr.r(0, yc-hp/2, st.tp, hp, "plate"));
+  B.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
+  // supported beam SECTION (cut) — masks the main beam behind it, hatched, bold outline
+  const iS = iSectionPts(scx, yc, sec.h, sec.b, sec.tf, sec.tw);
+  B.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));      // white mask over main beam
+  B.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));  // section hatch (on top of mask)
+  B.push(Pr.poly(iS,"out",{w:1.9}));                         // bold cut outline
+  for(const y of ys) B.push(...boltSide(0, y, st.tp+sec.tw, "left", b.d, b.washer));
+  // dims
+  if(st.n1>1) chainV(B, scx, sec.b/2+34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(B, scx-Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
+  B.push(Pr.weld(0, yc-hp/2+10, st.tp+60, yc-hp/2-40, {kind:st.weldType, size:st.weldLeg, both:true, text:"typ."}));
+  label(B, scx, prim.h/2+34, prim.name+"  (main)", {anchor:"middle", weight:"bold"});
+  label(B, scx, prim.h/2+16, sec.name+"  (supported)", {anchor:"middle", size:10});
+  return {A,B};
+};
+
+/* ---------------- BB-EP : Beam-to-beam bolted end plate ------------- */
+GEO["BB-EP"] = function(st){
+  const A=[], B=[], eg=epGeom(st), {sec,prim,b,hp,yc,ys,bpw,d0}=eg;
+  const notch = notchAuto(st, sec, prim);
+  const Lsec=Math.max(sec.h*1.0,360), tep=st.tep, g=st.g;
+  const ftip=(prim.b-prim.tw)/2;
+
+  /* View A : MAIN beam SECTION + supported beam ELEVATION (end plate edge-on) */
+  const iP=iSectionPts(-prim.tw/2,0,prim.h,prim.b,prim.tf,prim.tw);
+  A.push(Pr.hatch(iP,"steel",{edge:false})); A.push(Pr.poly(iP,"out"));
+  label(A,-(prim.b+prim.tw)/2-6,0,prim.name+"  (main)",{anchor:"middle",rot:-90,weight:"bold"});
+  // end plate edge-on, bolted to main web at x=g..g+tep, beam beyond
+  A.push(Pr.r(g, yc-hp/2, tep, hp, "plate"));
+  A.push(...beamElevNotched(g+tep, g+tep+Lsec, yc, sec.h, sec.tf, notch, "out"));
+  for(const y of ys) A.push(Pr.l(0, y, g+tep, y, "hidden",{tag:"bolts"}));        // bolt shanks into web
+  A.push(Pr.weld(g+tep, yc+sec.h/2-sec.tf, g+tep+70, yc+sec.h/2+30,{kind:st.weldType,size:st.weldLeg,both:true,text:"typ."}));
+  chainV(A, g+tep, -((prim.b+prim.tw)/2+32+g+tep), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(A, g+tep+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
+  label(A, g+tep+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)",{anchor:"middle",weight:"bold"});
+
+  /* View B : MAIN beam ELEVATION + end plate FACE with 2 columns of bolts */
+  const half=st.w/2, Lmain=Math.max(bpw+280, 440);
+  B.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out"));
+  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw); B.push(Pr.poly(iS,"hidden")); // supported beam behind plate
+  B.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate"));                                    // end plate face
+  for(const y of ys){ for(const sx of [-half,half]){ B.push(Pr.c(sx,y,d0/2,"bolt",{tag:"bolts"}));
+     B.push(Pr.l(sx-d0*0.35,y,sx+d0*0.35,y,"bolt",{w:0.8})); B.push(Pr.l(sx,y-d0*0.35,sx,y+d0*0.35,"bolt",{w:0.8})); } }
+  dimH(B, yc+hp/2+20, -half, half, 16, String(st.w), "w");
+  chainV(B, -bpw/2, -34, [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(B, -Lmain/2-22, -prim.h/2, prim.h/2, -16, String(Math.round(prim.h)));
+  label(B, 0, Math.max(yc+hp/2, prim.h/2)+40, [plCallout(tep,bpw,hp,st.grade), bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:14,anchor:"middle"});
+  label(B, 0, -prim.h/2-12, prim.name+"  (main)",{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+
+/* ---------------- BB-W : Beam-to-beam direct welded ----------------- */
+GEO["BB-W"] = function(st){
+  const A=[], B=[], {sec,prim}=members();
+  const notch=notchAuto(st,sec,prim), Lsec=Math.max(sec.h*1.0,360);
+  const yc=alignYc(st.align||"top",prim,sec), fkind=st.weldType, top=yc+sec.h/2, bot=yc-sec.h/2;
+  const ftip=(prim.b-prim.tw)/2;
+
+  /* View A : MAIN beam SECTION + supported beam ELEVATION (welded) */
+  const iP=iSectionPts(-prim.tw/2,0,prim.h,prim.b,prim.tf,prim.tw);
+  A.push(Pr.hatch(iP,"steel",{edge:false})); A.push(Pr.poly(iP,"out"));
+  label(A,-(prim.b+prim.tw)/2-6,0,prim.name+"  (main)",{anchor:"middle",rot:-90,weight:"bold"});
+  A.push(...beamElevNotched(0, Lsec, yc, sec.h, sec.tf, notch, "out"));
+  A.push(Pr.weld(0, top-sec.tf/2, ftip+40, top+34,{kind:fkind,size:st.weldLeg,both:false,text:"flange"}));
+  A.push(Pr.weld(0, bot+sec.tf/2, ftip+40, bot-34,{kind:fkind,size:st.weldLeg,both:false,text:"flange"}));
+  A.push(Pr.weld(0, yc, 90, yc+60,{kind:"fillet",size:st.weldLeg,both:true,text:"web"}));
+  A.push(...weldRun(0,bot+sec.tf,0,top-sec.tf,Math.max(st.weldLeg,4),1));
+  dimV(A,Lsec,bot,top,34,String(Math.round(sec.h)));
+  label(A,Lsec*0.5,top+30,sec.name+"  (welded)",{anchor:"middle",weight:"bold"});
+
+  /* View B : MAIN beam ELEVATION + supported beam SECTION + stiffeners */
+  const scx=sec.tw/2, Lmain=Math.max(sec.b+320, 460);
+  B.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out"));
+  // stiffeners on the main web aligned to supported beam flanges (pair)
+  if(st.ts>0){ for(const yy of [yc+sec.h/2-sec.tf/2, yc-sec.h/2+sec.tf/2])
+      B.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
+    label(B,scx-Lmain*0.36-6, yc, "stiff "+st.ts, {anchor:"middle",rot:-90,size:9}); }
+  const iS=iSectionPts(scx,yc,sec.h,sec.b,sec.tf,sec.tw);
+  B.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));
+  B.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));
+  B.push(Pr.poly(iS,"out",{w:1.9}));
+  B.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
+  B.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
+  dimV(B,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
+  dimV(B,scx-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
+  label(B,scx,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+
+/* column shown in elevation: rectangle (depth × length) with flange inner lines */
+function columnElev(xRight, depth, length, tf, yc, cls="out"){
+  const x0=xRight-depth, out=[];
+  out.push(Pr.r(x0, yc-length/2, depth, length, cls));
+  out.push(Pr.l(xRight-tf, yc-length/2, xRight-tf, yc+length/2, cls,{w:0.9}));
+  out.push(Pr.l(x0+tf, yc-length/2, x0+tf, yc+length/2, cls,{w:0.9}));
+  out.push(Pr.l(xRight, yc-length/2, xRight, yc+length/2, cls,{w:1.8}));      // support face
+  return out;
+}
+function boltRowsY(n1,p1){ const ys=[],y0=(n1-1)*p1/2; for(let i=0;i<n1;i++)ys.push(y0-i*p1); return ys; }
+
+/* ---------------- BC-FIN : Beam to column, fin plate ---------------- */
+GEO["BC-FIN"] = function(st){
+  const A=[], B=[], {sec,prim}=members(), b=boltProps(), d0=holeDia();
+  const major = st.axis==="major";
+  const la = st.bp>0 ? Math.max(st.bp-st.e2-(st.n2-1)*st.p2,20) : Math.max(50,2*b.d);
+  const bp = st.bp>0 ? st.bp : la+(st.n2-1)*st.p2+st.e2;
+  const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1+2*st.e1;
+  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(sec.h*1.0,360);
+  const colLen=Math.max(sec.h*1.9, sec.h+360), bgx=la+(st.n2-1)*st.p2/2;
+
+  /* View A : elevation */
+  A.push(...columnElev(0, prim.h, colLen, prim.tf, 0));
+  label(A,-prim.h-6,0,prim.name+(major?" (major)":" (minor)"),{anchor:"middle",rot:-90,weight:"bold"});
+  A.push(Pr.r(0,-hp/2,bp,hp,"plate"));
+  A.push(...beamElevH(g,0,Lsec,sec.h,sec.tf,"out"));
+  const bg=boltGridElev(bgx,0,st.n1,st.n2,st.p1,st.p2,d0,"bolts"); A.push(...bg.prims);
+  A.push(Pr.weld(0,hp/2-15,-prim.h-30,hp/2+40,{kind:st.weldType,size:st.weldLeg,both:true,text:"typ."}));
+  A.push(...weldRun(0,-hp/2,0,hp/2,Math.max(st.weldLeg,4),1));
+  chainV(A, la, -(la+prim.h+34), [hp/2].concat(ys).concat([-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(A,g+Lsec,-sec.h/2,sec.h/2,34,String(Math.round(sec.h)));
+  dimH(A,-sec.h/2-26,0,g,-20,String(g),"gap");
+  if(st.n2>1) chainH(A,hp/2+22,18,bg.centres.slice(0,st.n2).map(c=>c[0]),"p2");
+  label(A,g+Lsec*0.5,sec.h/2+30,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+  label(A,bp+12,-hp/2-6,[plCallout(st.tp,bp,hp,st.grade),bCallout(st.n1*st.n2,st.bolt,st.boltGrade,d0)],{lh:14});
+
+  /* View B : plan (looking down) */
+  if(major){
+    const iC=iSectionPtsH(-prim.h/2,0,prim.h,prim.b,prim.tf,prim.tw);
+    B.push(Pr.hatch(iC,"steel",{edge:false})); B.push(Pr.poly(iC,"out"));
+  } else {
+    const iC=iSectionPts(-prim.h/2,0,prim.h,prim.b,prim.tf,prim.tw); // web faces beam
+    B.push(Pr.hatch(iC,"steel",{edge:false})); B.push(Pr.poly(iC,"out"));
+  }
+  // fin plate (plan: strip of thickness tp offset from beam web)
+  B.push(Pr.hatch([[0,sec.tw/2],[bp,sec.tw/2],[bp,sec.tw/2+st.tp],[0,sec.tw/2+st.tp]],"steel",{edge:false}));
+  B.push(Pr.r(0,sec.tw/2,bp,st.tp,"plate"));
+  // beam in plan (top flange width b, web centreline)
+  B.push(Pr.r(g,-sec.b/2,Lsec,sec.b,"out"));
+  B.push(Pr.l(g,-sec.tw/2,g+Lsec,-sec.tw/2,"out",{w:0.9})); B.push(Pr.l(g,sec.tw/2,g+Lsec,sec.tw/2,"out",{w:0.9}));
+  for(const cx of (st.n2>1?[la,la+(st.n2-1)*st.p2]:[la])) B.push(...boltSide(cx, sec.tw/2+st.tp, st.tp+sec.tw, "left", b.d, b.washer));
+  B.push(...weldRun(0,sec.tw/2,bp,sec.tw/2,Math.max(st.weldLeg,4),-1));
+  dimV(B,-prim.h-20,-prim.b/2,prim.b/2,-16,String(Math.round(prim.b)));
+  dimH(B,-sec.b/2-22,0,g,-16,String(g),"gap");
+  label(B,g+Lsec*0.5,sec.b/2+18,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+  label(B,-prim.h/2,prim.b/2+16,prim.name,{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+
+/* ---------------- BC-EP : Beam to column, end plate ----------------- */
+GEO["BC-EP"] = function(st){
+  const A=[], B=[], {sec,prim}=members(), b=boltProps(), d0=holeDia();
+  const ext = st.epMode==="extended";
+  const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1 + (ext? st.p1*0.6:0);
+  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(sec.h*1.0,360);
+  const tep=st.tep, colLen=Math.max(sec.h*1.9,sec.h+360), half=st.w/2;
+  const bpw=st.w+2*Math.max(st.e2,1.5*b.d);
+  const epTop = ext? sec.h/2+st.e1 : sec.h/2, epBot=-sec.h/2-( ext?0:0);
+  const epH = epTop-(-(sec.h/2)); // simple: end plate roughly beam depth (+ext above)
+
+  /* View A : elevation */
+  A.push(...columnElev(0,prim.h,colLen,prim.tf,0));
+  label(A,-prim.h-6,0,prim.name,{anchor:"middle",rot:-90,weight:"bold"});
+  const plTop= ext? sec.h/2+st.e1 : sec.h/2, plBot=-sec.h/2;
+  A.push(Pr.r(g, plBot, tep, plTop-plBot, "plate"));
+  A.push(...beamElevH(g+tep,0,Lsec,sec.h,sec.tf,"out"));
+  for(const y of ys) A.push(Pr.c(g+tep*0.5,y,d0/2,"hidden",{tag:"bolts"}));
+  A.push(Pr.weld(g+tep, sec.h/2-sec.tf, g+tep+70, sec.h/2+30,{kind:st.weldType,size:st.weldLeg,both:true,text:"typ."}));
+  chainV(A,g+tep,-(prim.h+40),[plTop].concat(ys).concat([plBot]).sort((p,q)=>q-p),"p1");
+  dimV(A,g+tep+Lsec,-sec.h/2,sec.h/2,34,String(Math.round(sec.h)));
+  dimV(A,g,plTop,plBot,-(prim.h+70),String(Math.round(plTop-plBot)));
+  label(A,g+tep+Lsec*0.5,sec.h/2+30,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+
+  /* View B : plan */
+  const iC=iSectionPtsH(-prim.h/2,0,prim.h,prim.b,prim.tf,prim.tw);
+  B.push(Pr.hatch(iC,"steel",{edge:false})); B.push(Pr.poly(iC,"out"));
+  B.push(Pr.r(0,-bpw/2,tep,bpw,"plate"));                     // end plate edge-on (plan)
+  B.push(Pr.r(tep,-sec.b/2,Lsec,sec.b,"out"));                 // beam top-flange in plan
+  B.push(Pr.l(tep,-sec.tw/2,tep+Lsec,-sec.tw/2,"out",{w:0.9})); B.push(Pr.l(tep,sec.tw/2,tep+Lsec,sec.tw/2,"out",{w:0.9}));
+  for(const sx of [-half,half]) B.push(...boltSide(-prim.tf*0+ -10, sx, tep+prim.tf+10, "left", b.d, b.washer));
+  dimV(B,-prim.h-20,-half,half,-16,String(st.w),"w");
+  label(B,tep+Lsec*0.5,sec.b/2+18,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+  label(B,0,bpw/2+30,[plCallout(tep,bpw,Math.round(plTop-plBot),st.grade),bCallout(2*st.n1,st.bolt,st.boltGrade,d0)],{lh:14,anchor:"middle"});
+  return {A,B};
+};
+
+/* ---------------- BC-W : Beam to column, welded moment -------------- */
+GEO["BC-W"] = function(st){
+  const A=[], B=[], {sec,prim}=members(), Lsec=Math.max(sec.h*1.0,380);
+  const colLen=Math.max(sec.h*2.0,sec.h+420);
+  /* View A : elevation */
+  A.push(...columnElev(0,prim.h,colLen,prim.tf,0));
+  label(A,-prim.h-6,0,prim.name,{anchor:"middle",rot:-90,weight:"bold"});
+  A.push(...beamElevH(2,0,Lsec,sec.h,sec.tf,"out"));
+  const top=sec.h/2, bot=-sec.h/2;
+  A.push(Pr.weld(2,top-sec.tf/2,-prim.h-30,top+34,{kind:st.weldType,size:st.weldLeg,both:false,text:"flange FPBW"}));
+  A.push(Pr.weld(2,bot+sec.tf/2,-prim.h-30,bot-34,{kind:st.weldType,size:st.weldLeg,both:false,text:"flange FPBW"}));
+  A.push(Pr.weld(2,0,2+90,60,{kind:"fillet",size:st.weldLeg,both:true,text:"web"}));
+  // column stiffeners opposite beam flanges (continuity plates) - shown as hidden behind flange
+  for(const yy of [top-sec.tf/2,bot+sec.tf/2]) A.push(Pr.l(-prim.h+prim.tf,yy,-prim.tf,yy,"hidden"));
+  dimV(A,2+Lsec,bot,top,34,String(Math.round(sec.h)));
+  label(A,2+Lsec*0.5,top+30,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+
+  /* View B : plan */
+  const iC=iSectionPtsH(-prim.h/2,0,prim.h,prim.b,prim.tf,prim.tw);
+  B.push(Pr.hatch(iC,"steel",{edge:false})); B.push(Pr.poly(iC,"out"));
+  // continuity stiffeners (pair) inside column aligned to beam flanges
+  if(st.ts>0){
+    B.push(Pr.r(-prim.h/2+prim.tf, -sec.b/2, prim.h-2*prim.tf, st.ts,"plate"));
+    label(B,-prim.h/2,sec.b/2+14,"continuity PL "+st.ts,{anchor:"middle",size:9});
+  }
+  // doubler plate on column web
+  if(st.doubler){ B.push(Pr.r(-st.doublerT-prim.tw/2,-sec.b/2*0.8,st.doublerT,sec.b*0.8,"plate"));
+    label(B,-prim.h/2-14,0,"doubler "+st.doublerT,{anchor:"middle",rot:-90,size:9}); }
+  B.push(Pr.r(0,-sec.b/2,Lsec,sec.b,"out"));
+  B.push(Pr.l(0,-sec.tw/2,Lsec,-sec.tw/2,"out",{w:0.9})); B.push(Pr.l(0,sec.tw/2,Lsec,sec.tw/2,"out",{w:0.9}));
+  B.push(Pr.weld(0,sec.b/2-2,70,sec.b/2+30,{kind:st.weldType,size:st.weldLeg,both:false,text:"FPBW"}));
+  dimV(B,-prim.h-20,-prim.b/2,prim.b/2,-16,String(Math.round(prim.b)));
+  label(B,Lsec*0.5,sec.b/2+18,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+
+/* ===================== Anchors / concrete (§5.5) ===================== */
+function anchorCallout(n,size,type,hef){ return `${n} No. ${size} ${type}, hₑf = ${hef}`; }
+// anchor positions across a span given count, edge distance, optional fixed spacing
+function anchorPos(span, n, c, fixed){
+  if(n<=1) return [0];
+  const s = fixed>0 ? fixed : (span-2*c)/(n-1);
+  const tot=s*(n-1), out=[]; for(let i=0;i<n;i++) out.push(-tot/2 + i*s); return out;
+}
+// vertical anchor (base plate) tip pointing down
+function anchorDown(arr, x, T, grout, hef, proj, d, type){
+  const cTop=-T-grout, tip=cTop-hef, r=d/2;
+  arr.push(Pr.l(x-r, proj, x-r, cTop, "bolt")); arr.push(Pr.l(x+r, proj, x+r, cTop, "bolt"));
+  arr.push(Pr.l(x-r, cTop, x-r, tip, "hidden")); arr.push(Pr.l(x+r, cTop, x+r, tip, "hidden"));
+  // nut + washer at top of plate
+  arr.push(Pr.l(x-d*0.9, 2, x+d*0.9, 2, "bolt",{w:1.0}));
+  arr.push(Pr.r(x-d*0.7, 2, d*1.4, d*0.7, "bolt"));
+  if(type==="cast-in headed"||type==="headed studs"){
+    arr.push(Pr.r(x-d*0.95, tip, d*1.9, d*0.5, "hidden"));            // head plate
+  } else if(type==="cast-in J/L-bolt"){
+    arr.push(Pr.path([["M",x-r,tip+d],["L",x-r,tip+r],["A",r+ d*0.0+ r, x+r, tip+r,false],["L",x+r,tip+d]],"hidden"));
+  } else if(type==="post-installed chemical"){
+    arr.push(Pr.hatch([[x-d,cTop],[x+d,cTop],[x+d,tip],[x-d,tip]],"grout",{edge:false}));   // bond zone
+  } else if(type==="post-installed mechanical"){
+    arr.push(Pr.l(x-r,tip+d,x-d,tip,"hidden")); arr.push(Pr.l(x+r,tip+d,x+d,tip,"hidden"));   // sleeve
+  }
+  return {tip,cTop};
+}
+// horizontal anchor/stud (embedded plate) pointing -x into concrete
+function anchorLeft(arr, y, faceX, T, hef, d, type){
+  const back=faceX-T, tip=back-hef, r=d/2;
+  arr.push(Pr.l(faceX, y-r, back, y-r, "bolt")); arr.push(Pr.l(faceX, y+r, back, y+r, "bolt"));
+  arr.push(Pr.l(back, y-r, tip, y-r, "hidden")); arr.push(Pr.l(back, y+r, tip, y+r, "hidden"));
+  if(type==="headed studs"||type==="cast-in headed"){ arr.push(Pr.r(tip, y-d*0.95, d*0.5*( -1), d*1.9, "hidden")); arr.push(Pr.r(tip,y-d*0.95,-d*0.5,d*1.9,"hidden")); }
+  else if(type==="post-installed chemical"){ arr.push(Pr.hatch([[back,y-d],[tip,y-d],[tip,y+d],[back,y+d]],"grout",{edge:false})); }
+  return tip;
+}
+function concreteBlock(arr, cx, topY, W, H){
+  arr.push(Pr.hatch([[cx-W/2,topY],[cx+W/2,topY],[cx+W/2,topY-H],[cx-W/2,topY-H]],"concrete",{edge:false}));
+  arr.push(Pr.poly([[cx-W/2,topY],[cx+W/2,topY],[cx+W/2,topY-H],[cx-W/2,topY-H]],"out",{w:1.2}));
+}
+
+/* ---------------- CCON-BP : column base plate ----------------------- */
+GEO["CCON-BP"] = GEO["CCON-BP-S"] = function(st){
+  const A=[], B=[], {prim}=members(), d=anchorDia(), hef=hefVal();
+  const stiff = st.conn==="CCON-BP-S";
+  const Bp = st.Bp>0 ? st.Bp : Math.round(prim.h+2*100);     // along column depth
+  const Lp = st.Lp>0 ? st.Lp : Math.round(prim.b+2*100);     // along column width
+  const T=st.T, grout=st.grout, colLen=Math.max(Bp*1.1,520);
+  const concB=Math.max(Bp+240,Bp*1.3), concL=Math.max(Lp+240,Lp*1.3);
+  const xs=anchorPos(Bp, st.na2, st.ca, st.sa2);             // across B (elevation x)
+  const ysP=anchorPos(Lp, st.na1, st.ca, st.sa1);            // across L (plan y)
+
+  /* View A : elevation */
+  // column (web-face rectangle on plate)
+  A.push(Pr.r(-prim.h/2,0,prim.h,colLen,"out"));
+  A.push(Pr.l(-prim.h/2+prim.tf,0,-prim.h/2+prim.tf,colLen,"out",{w:0.9}));
+  A.push(Pr.l(prim.h/2-prim.tf,0,prim.h/2-prim.tf,colLen,"out",{w:0.9}));
+  A.push(...weldRun(-prim.h/2,0,prim.h/2,0,Math.max(st.weldLeg,6),-1));
+  A.push(Pr.weld(prim.h/2-6,0,prim.h/2+70,40,{kind:st.weldType,size:st.weldLeg,both:true,text:"typ."}));
+  // base plate, grout, concrete
+  A.push(Pr.hatch([[-Bp/2,0],[Bp/2,0],[Bp/2,-T],[-Bp/2,-T]],"steel",{edge:false}));
+  A.push(Pr.r(-Bp/2,-T,Bp,T,"plate"));
+  A.push(Pr.hatch([[-Bp/2,-T],[Bp/2,-T],[Bp/2,-T-grout],[-Bp/2,-T-grout]],"grout",{edge:false}));
+  A.push(Pr.poly([[-Bp/2,-T],[Bp/2,-T],[Bp/2,-T-grout],[-Bp/2,-T-grout]],"thin"));
+  concreteBlock(A, 0, -T-grout, concB, st.concH);
+  // gussets (elevation: triangles on column faces)
+  if(stiff){ const gh=st.stiffHeight>0?st.stiffHeight:Math.min(colLen*0.5,Bp*0.6);
+    for(const sgn of [-1,1]){ const fx=sgn*prim.h/2;
+      A.push(Pr.poly([[fx,0],[fx+sgn*(Bp/2-prim.h/2-20),0],[fx,gh]],"plate")); }
+    label(A,prim.h/2+10,0,"gusset PL "+st.ts,{anchor:"start",size:9}); }
+  // anchors
+  let tipInfo=null;
+  for(const ax of xs) tipInfo=anchorDown(A, ax, T, grout, hef, st.proj, d, st.anchorType);
+  // dims
+  dimH(A,0+18,-Bp/2,Bp/2,Math.max(colLen*0.6,60),String(Bp),"Bp");
+  dimV(A,-Bp/2-30,0,-T,-18,"T"+T,"T");
+  dimV(A,-Bp/2-30,-T,-T-grout,-18,String(grout),"grout");
+  if(xs.length) dimV(A, xs[xs.length-1]+34, -T-grout, tipInfo.tip, 24, "hₑf="+hef, "hef");
+  dimV(A, xs[0]-24, st.proj, 0, -16, String(st.proj),"proj");
+  if(xs.length>1) chainH(A, -T-grout-st.concH-24, -16, xs, "sa");
+  // callouts
+  label(A,-concB/2,-T-grout-st.concH-30, anchorCallout(st.na1*st.na2,st.anchorSize,st.anchorType,hef),{weight:"bold"});
+  label(A,0,colLen+18,prim.name+"  (column)",{anchor:"middle",weight:"bold"});
+  label(A,Bp/2+8,-T/2,plCallout(T,Bp,Lp,st.grade),{anchor:"start"});
+
+  /* View B : plan (base plate + column footprint + anchor layout) */
+  B.push(Pr.r(-Bp/2,-Lp/2,Bp,Lp,"plate"));
+  const iC=iSectionPtsH(0,0,prim.h,prim.b,prim.tf,prim.tw);
+  B.push(Pr.poly(iC,"out"));
+  for(const ax of xs) for(const ay of ysP){
+    B.push(Pr.c(ax,ay,d/2,"bolt",{tag:"anchor"}));
+    B.push(Pr.c(ax,ay,d*0.95,"hidden"));        // washer/head footprint
+    B.push(Pr.l(ax-d*0.7,ay,ax+d*0.7,ay,"bolt",{w:0.7})); B.push(Pr.l(ax,ay-d*0.7,ax,ay+d*0.7,"bolt",{w:0.7}));
+  }
+  if(stiff){ const sl=st.stiffLayout==="4";
+    for(const sgn of [-1,1]) B.push(Pr.r(sgn*prim.h/2, -st.ts/2, sgn*(Bp/2-prim.h/2-20), st.ts,"plate"));
+    if(sl) for(const sgn of [-1,1]) B.push(Pr.r(-st.ts/2, sgn*prim.b/2, st.ts, sgn*(Lp/2-prim.b/2-20),"plate"));
+  }
+  if(xs.length>1) chainH(B, -Lp/2-22, -16, xs, "sa2");
+  if(ysP.length>1) chainV(B, -Bp/2-22, -16, ysP, "sa1");
+  dimH(B, Lp/2+20, -Bp/2, Bp/2, 16, String(Bp),"Bp");
+  dimV(B, Bp/2+20, -Lp/2, Lp/2, 16, String(Lp),"Lp");
+  dimH(B, -Lp/2-22, -Bp/2, xs[0], -34, String(st.ca),"c");
+  label(B,0,Lp/2+58,plCallout(T,Bp,Lp,st.grade),{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+
+/* ---------------- BCON-FIN / BCON-W : beam to concrete -------------- */
+function bconCommon(st){
+  const {sec}=members(), d=anchorDia(), hef=hefVal();
+  const concT = st.concType==="wall"? st.wallT : Math.max(st.wallT,400);
+  const Lp = st.Lp>0 ? st.Lp : Math.round(sec.h+120);
+  const Bp = st.Bp>0 ? st.Bp : Math.round(sec.b+120);
+  return {sec,d,hef,concT,Lp,Bp};
+}
+GEO["BCON-FIN"] = function(st){
+  const A=[], B=[], cc=bconCommon(st), {sec,d,hef,concT,Lp,Bp}=cc, bolt=boltProps(), d0=holeDia();
+  const la=st.bp>0?Math.max(st.bp-st.e2-(st.n2-1)*st.p2,20):Math.max(50,2*bolt.d);
+  const bp=st.bp>0?st.bp:la+(st.n2-1)*st.p2+st.e2, hp=st.hp>0?st.hp:(st.n1-1)*st.p1+2*st.e1;
+  const ys=boltRowsY(st.n1,st.p1), g=st.g, Lsec=Math.max(sec.h*1.0,360), Hc=Math.max(st.concH,Lp+200);
+  const T=st.T;
+  /* View A : elevation */
+  concreteBlock(A, -concT/2, Hc/2, concT, Hc);             // concrete to the left, face at x=0
+  A.push(Pr.r(-T,-Lp/2,T,Lp,"plate"));                      // embedded plate (flush, body in concrete)
+  // anchors/studs into concrete
+  const aty=anchorPos(Lp,Math.max(2,st.na1),st.ca,st.sa1);
+  for(const y of aty) anchorLeft(A, y, 0, T, hef, d, st.anchorType);
+  A.push(Pr.r(0,-hp/2,bp,hp,"plate"));                      // fin plate
+  A.push(...weldRun(0,-hp/2,0,hp/2,Math.max(st.weldLeg,4),1));
+  A.push(...beamElevH(g,0,Lsec,sec.h,sec.tf,"out"));
+  const bg=boltGridElev(la+(st.n2-1)*st.p2/2,0,st.n1,st.n2,st.p1,st.p2,d0,"bolts"); A.push(...bg.prims);
+  chainV(A,la,-(la+T+40),[hp/2].concat(ys).concat([-hp/2]).sort((p,q)=>q-p),"p1");
+  dimV(A,g+Lsec,-sec.h/2,sec.h/2,34,String(Math.round(sec.h)));
+  dimH(A,-Lp/2-26,-T-hef,0,-18,"hₑf="+hef,"hef");
+  label(A,g+Lsec*0.5,sec.h/2+30,sec.name+"  (beam)",{anchor:"middle",weight:"bold"});
+  label(A,-concT/2,Hc/2+16,(st.concType==="wall"?"RC wall":"RC column"),{anchor:"middle",weight:"bold"});
+  label(A,bp+12,-hp/2-6,[plCallout(st.tp,bp,hp,st.grade),bCallout(st.n1*st.n2,st.bolt,st.boltGrade,d0),
+        anchorCallout(aty.length*Math.max(1,st.na2),st.anchorSize,st.anchorType,hef)],{lh:13});
+  /* View B : embedded plate face (anchor layout + fin + bolt holes) */
+  B.push(Pr.r(-Bp/2,-Lp/2,Bp,Lp,"plate"));
+  const axs=anchorPos(Bp,Math.max(2,st.na2),st.ca,st.sa2), ays=anchorPos(Lp,Math.max(2,st.na1),st.ca,st.sa1);
+  for(const ax of axs)for(const ay of ays){ B.push(Pr.c(ax,ay,d/2,"bolt",{tag:"anchor"})); B.push(Pr.c(ax,ay,d*0.9,"hidden")); }
+  // fin plate outline on face + bolt holes
+  B.push(Pr.r(-st.tp/2, -hp/2, st.tp, hp, "plate"));
+  for(const y of ys) B.push(Pr.c(0,y,d0/2,"hidden",{tag:"bolts"}));
+  if(axs.length>1) chainH(B,-Lp/2-20,-16,axs,"sa2"); if(ays.length>1) chainV(B,-Bp/2-20,-16,ays,"sa1");
+  dimH(B,Lp/2+18,-Bp/2,Bp/2,16,String(Bp),"Bp"); dimV(B,Bp/2+18,-Lp/2,Lp/2,16,String(Lp),"Lp");
+  label(B,0,Lp/2+52,plCallout(T,Bp,Lp,st.grade)+"  (embedded)",{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+GEO["BCON-W"] = function(st){
+  const A=[], B=[], cc=bconCommon(st), {sec,d,hef,concT,Lp,Bp}=cc, g=st.g, T=st.T;
+  const Lsec=Math.max(sec.h*1.0,360), Hc=Math.max(st.concH,Lp+200);
+  concreteBlock(A,-concT/2,Hc/2,concT,Hc);
+  A.push(Pr.r(-T,-Lp/2,T,Lp,"plate"));
+  const aty=anchorPos(Lp,Math.max(2,st.na1),st.ca,st.sa1);
+  for(const y of aty) anchorLeft(A,y,0,T,hef,d,st.anchorType);
+  A.push(...beamElevH(g,0,Lsec,sec.h,sec.tf,"out"));
+  // beam welded directly to plate face
+  A.push(...weldRun(0,-sec.h/2,0,sec.h/2,Math.max(st.weldLeg,5),1));
+  A.push(Pr.weld(0,sec.h/2-sec.tf,0+80,sec.h/2+30,{kind:st.weldType,size:st.weldLeg,both:false,text:"FPBW"}));
+  dimV(A,g+Lsec,-sec.h/2,sec.h/2,34,String(Math.round(sec.h)));
+  dimH(A,-Lp/2-26,-T-hef,0,-18,"hₑf="+hef,"hef");
+  label(A,g+Lsec*0.5,sec.h/2+30,sec.name+"  (beam, welded)",{anchor:"middle",weight:"bold"});
+  label(A,-concT/2,Hc/2+16,(st.concType==="wall"?"RC wall":"RC column"),{anchor:"middle",weight:"bold"});
+  /* View B : plate face */
+  B.push(Pr.r(-Bp/2,-Lp/2,Bp,Lp,"plate"));
+  const axs=anchorPos(Bp,Math.max(2,st.na2),st.ca,st.sa2), ays=anchorPos(Lp,Math.max(2,st.na1),st.ca,st.sa1);
+  for(const ax of axs)for(const ay of ays){ B.push(Pr.c(ax,ay,d/2,"bolt",{tag:"anchor"})); B.push(Pr.c(ax,ay,d*0.9,"hidden")); }
+  // beam footprint (I) on plate
+  B.push(Pr.poly(iSectionPts(0,0,sec.h,sec.b,sec.tf,sec.tw),"out"));
+  if(axs.length>1) chainH(B,-Lp/2-20,-16,axs,"sa2"); if(ays.length>1) chainV(B,-Bp/2-20,-16,ays,"sa1");
+  dimH(B,Lp/2+18,-Bp/2,Bp/2,16,String(Bp),"Bp"); dimV(B,Bp/2+18,-Lp/2,Lp/2,16,String(Lp),"Lp");
+  label(B,0,Lp/2+52,plCallout(T,Bp,Lp,st.grade)+"  (embedded)",{anchor:"middle",weight:"bold"});
+  return {A,B};
+};
+
+/* =====================================================================
+   §6  VALIDATION engine  ->  [{level, code, msg, tags}]
+   ===================================================================== */
+function validate(st){
+  const out=[], {sec,prim}=members(), conn=st.conn;
+  const add=(level,code,msg,tags)=>out.push({level,code,msg,tags:tags||[]});
+  const fin=conn.endsWith("FIN"), ep=conn.endsWith("EP"), bolted=fin||ep;
+  const anchors=conn.startsWith("BCON")||conn.startsWith("CCON");
+  if(bolted){
+    const d0=holeDia(), bd=boltProps().d;
+    const t = fin ? Math.min(st.tp, sec.tw) : Math.min(st.tep, prim.tw||st.tep);
+    // §6.1 EC3-1-8 Table 3.3 minima (errors)
+    if(st.e1 < 1.2*d0) add("error","E-E1MIN",`e₁ = ${st.e1} < 1.2·d₀ = ${(1.2*d0).toFixed(1)}`,["e1"]);
+    if(fin && st.e2 < 1.2*d0) add("error","E-E2MIN",`e₂ = ${st.e2} < 1.2·d₀ = ${(1.2*d0).toFixed(1)}`,["e2"]);
+    if(st.p1 < 2.2*d0) add("error","E-P1MIN",`p₁ = ${st.p1} < 2.2·d₀ = ${(2.2*d0).toFixed(1)}`,["p1"]);
+    if(fin && st.n2>1 && st.p2 < 2.4*d0) add("error","E-P2MIN",`p₂ = ${st.p2} < 2.4·d₀ = ${(2.4*d0).toFixed(1)}`,["p2"]);
+    if(ep && st.w < 2.4*d0) add("error","E-WMIN",`w = ${st.w} < 2.4·d₀ = ${(2.4*d0).toFixed(1)}`,["w"]);
+    // §6.1 maxima (warn)
+    const eMax=4*t+40, pMax=Math.min(14*t,200);
+    if(st.e1>eMax) add("warn","W-E1MAX",`e₁ = ${st.e1} > 4t+40 = ${eMax}`,["e1"]);
+    if(fin && st.e2>eMax) add("warn","W-E2MAX",`e₂ = ${st.e2} > 4t+40 = ${eMax}`,["e2"]);
+    if(st.p1>pMax) add("warn","W-P1MAX",`p₁ = ${st.p1} > min(14t,200) = ${pMax}`,["p1"]);
+    if(fin && st.n2>1 && st.p2>pMax) add("warn","W-P2MAX",`p₂ = ${st.p2} > min(14t,200) = ${pMax}`,["p2"]);
+    // §6.2 fit-up: bolt group within clear web depth d of supported beam
+    const dz=clearDepth(sec), grp=(st.n1-1)*st.p1 + 2*st.e1;
+    if(grp > dz+1) add("error","E-FITDEPTH",`bolt group height ${Math.round(grp)} exceeds clear web depth d = ${Math.round(dz)} of ${sec.name}`,["bolts","p1"]);
+    // §6.3 SSSS buildability (warn)
+    if(fin && st.tp > 0.5*bd) add("warn","W-DUCT",`tₚ = ${st.tp} > 0.5·d_bolt = ${0.5*bd}; verify ductility per SSSS §2.1.3`,["tp"]);
+    if(fin && st.weldLeg < 0.8*st.tp) add("warn","W-WELDLEG",`fin weld s = ${st.weldLeg} < 0.8·tₚ = ${(0.8*st.tp).toFixed(1)} (plate must yield first)`,["weld"]);
+    if(active("g") && st.g < 10) add("warn","W-GAPMIN",`gap g = ${st.g} < 10 mm recommended (SSSS)`,["gap"]);
+    if(st.n1 < 2) add("warn","W-NMIN","minimum 2 bolt rows recommended",["bolts"]);
+    if(ep){ const bpw=st.w+2*Math.max(st.e2,1.5*bd);
+      if(prim.b && bpw>prim.b) add("warn","W-EPWIDTH",`end-plate width ${Math.round(bpw)} > supporting flange width ${prim.b}`,["w"]); }
+  }
+  if(anchors){
+    const d=anchorDia();
+    if(st.ca < 6*d) add("warn","W-ANCHEDGE",`anchor edge c = ${st.ca} < 6·d = ${6*d} (verify edge distance — placeholder)`,["anchor","c"]);
+    if(hefVal() < 8*d) add("warn","W-HEFMIN",`hₑf = ${hefVal()} < 8·d = ${8*d} — shallow embedment`,["hef"]);
+  }
+  if(active("weldLeg") && st.weldLeg < 4) add("error","E-WELDMIN",`fillet leg ${st.weldLeg} < 4 mm`,["weld"]);
+  if(!out.length) add("ok","OK","All detailing checks pass.",[]);
+  return out;
+}
+
+/* =====================================================================
+   §7  RENDER orchestrator
+   ===================================================================== */
+let RED = new Set();
+function ratioLabel(scale, forced){ const n=1/(scale*MM_PER_PX); const r=n<10?n.toFixed(1):Math.round(n); return "1:"+r+(forced?"":" (fit)"); }
+function fitScale(prims, svg){ const W=svg.clientWidth||880,H=560,pad=28,bb=bboxOf(prims); return Math.min((W-2*pad)/bb.w,(H-2*pad)/bb.h); }
+function memberSummary(){ const {sec,prim}=members(), c=state.conn;
+  if(c.startsWith("CCON")) return prim.name+" → concrete";
+  if(c.startsWith("BCON")) return sec.name+" → concrete";
+  return sec.name+" → "+prim.name; }
+
+function redraw(){
+  let geo; try{ geo=GEO[state.conn](state); }
+  catch(e){ console.error(e); geo={A:[Pr.txt(0,0,"⚠ geometry error: "+e.message,{anchor:"start"})],B:[]}; }
+  const items=validate(state);
+  RED=new Set(); items.forEach(it=>{ if(it.level==="error") it.tags.forEach(t=>RED.add(t)); });
+  const svgA=document.getElementById("viewA"), svgB=document.getElementById("viewB");
+  const showA=state.view!=="B", showB=state.view!=="A";
+  document.getElementById("figA").style.display=showA?"":"none";
+  document.getElementById("figB").style.display=showB?"":"none";
+  let forced=false, scale=1;
+  if(state.drawScale!=="auto"){ scale=1/(Number(state.drawScale)*MM_PER_PX); forced=true; }
+  else { const sc=[]; if(showA&&geo.A.length)sc.push(fitScale(geo.A,svgA)); if(showB&&geo.B.length)sc.push(fitScale(geo.B,svgB)); scale=sc.length?Math.min(...sc):1; }
+  if(showA) renderView(svgA,geo.A,scale); else svgA.innerHTML="";
+  if(showB) renderView(svgB,geo.B,scale); else svgB.innerHTML="";
+  if(forced){ // physical sizing so 1:n prints true
+    for(const [svg,show,prims] of [[svgA,showA,geo.A],[svgB,showB,geo.B]]) if(show){
+      const W=svg.clientWidth||880; svg.style.width=(W*MM_PER_PX).toFixed(1)+"mm"; svg.style.height=(560*MM_PER_PX).toFixed(1)+"mm"; }
+  } else { svgA.style.width=svgA.style.height=""; svgB.style.width=svgB.style.height=""; }
+  const cd=CONN[state.conn], ms=memberSummary();
+  document.getElementById("capA").textContent=cd.vA+" — "+ms;
+  document.getElementById("capB").textContent=cd.vB+" — "+ms;
+  document.getElementById("scaleA").textContent=showA?ratioLabel(scale,forced):"";
+  document.getElementById("scaleB").textContent=showB?ratioLabel(scale,forced):"";
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById("connTitle").textContent=`${state.conn} · ${cd.name} · ${ms} · ${today}`;
+  document.getElementById("titleStrip").innerHTML=
+    `<span>${state.conn} — ${cd.name}</span><span class="sep">|</span><span class="muted">${ms}</span>`
+    +`<span class="sep">|</span><span class="muted">${state.grade}</span><span class="sep">|</span>`
+    +`<span class="muted">${today}</span><span class="sep">|</span><span class="muted">${ratioLabel(scale,forced)}</span>`;
+  renderValidation(items);
+  if(state.showParamTable) renderParamTable();
+}
+function debounce(fn,ms){ let h; return function(){ clearTimeout(h); h=setTimeout(fn,ms); }; }
+const redrawD = debounce(redraw,50);
+
+function renderValidation(items){
+  const box=document.getElementById("validate");
+  const ne=items.filter(i=>i.level==="error").length, nw=items.filter(i=>i.level==="warn").length;
+  let h=`<h4>Validation `;
+  h+= ne?`<span class="vbadge e">${ne} error${ne>1?"s":""}</span>`:`<span class="vbadge ok">no errors</span>`;
+  if(nw) h+=`<span class="vbadge w">${nw} warn${nw>1?"s":""}</span>`;
+  h+=`</h4>`;
+  for(const it of items){
+    if(it.level==="ok"){ h+=`<div class="vitem ok"><span class="code">OK</span><span>${it.msg}</span></div>`; continue; }
+    h+=`<div class="vitem ${it.level==="error"?"e":"w"}"><span class="code">${it.code}</span><span>${it.msg}</span></div>`;
+  }
+  box.innerHTML=h;
+}
+function renderParamTable(){
+  const wrap=document.getElementById("paramTableWrap"); wrap.hidden=false;
+  const {sec,prim}=members(); const rows=[];
+  rows.push(["Connection", state.conn+" — "+CONN[state.conn].name]);
+  rows.push(["Members", memberSummary()]);
+  rows.push(["Steel grade", state.grade]);
+  for(const k of (SCHEMA[state.conn]||[])){ const c=CONTROLS[k]; if(!c||c.hidden) continue;
+    let v=state[k]; if(k==="hp"&&v==0)v="auto"; if((k==="bp"||k==="Bp"||k==="Lp"||k==="hef"||k==="sa1"||k==="sa2"||k==="stiffHeight")&&v==0)v="auto";
+    if(k==="secSec"||k==="primSec"){ v=resolveSec(v,state[k==="secSec"?"secCustom":"primCustom"]).name; }
+    rows.push([c.label, v]); }
+  // derived
+  if(state.conn.endsWith("FIN")||state.conn.endsWith("EP")) rows.push(["Hole d₀ (derived)", holeDia()+" mm"]);
+  if(state.conn.startsWith("BCON")||state.conn.startsWith("CCON")) rows.push(["hₑf (used)", hefVal()+" mm"]);
+  let h=`<h3>Parameter summary — ${state.conn}</h3><table class="pt"><caption>${memberSummary()} · ${new Date().toISOString().slice(0,10)}</caption>`;
+  for(const [k,v] of rows) h+=`<tr><th>${k}</th><td>${v}</td></tr>`;
+  h+=`</table>`; wrap.innerHTML=h;
+}
+
+/* =====================================================================
+   §8  UI builder (left panel)
+   ===================================================================== */
+function el(tag,attrs,parent){ const e=document.createElement(tag); if(attrs)for(const k in attrs){ if(k==="text")e.textContent=attrs[k]; else if(k==="html")e.innerHTML=attrs[k]; else e.setAttribute(k,attrs[k]); } if(parent)parent.appendChild(e); return e; }
+
+function buildTiles(){
+  const box=document.getElementById("tiles"); box.innerHTML="";
+  for(const fam of FAMILIES){
+    el("div",{class:"fam",text:fam.label},box);
+    for(const id of fam.ids){
+      const t=el("div",{class:"tile"+(state.conn===id?" sel":"")},box);
+      el("div",{class:"id",text:id},t); el("div",{class:"nm",text:CONN[id].name},t);
+      t.onclick=()=>{ const keep={view:state.view,drawScale:state.drawScale,theme:state.theme,showParamTable:state.showParamTable};
+        state=defaultState(id); Object.assign(state,keep); buildTiles(); buildPanel(); redraw(); };
+    }
+  }
+}
+function numField(key){
+  const c=CONTROLS[key], wrap=el("div",{class:"numwrap"});
+  const inp=el("input",{type:"number",value:state[key],step:c.step||1,min:c.min,max:c.max},wrap);
+  const stp=el("div",{class:"stp"},wrap); const up=el("button",{text:"▲"},stp), dn=el("button",{text:"▼"},stp);
+  const commit=v=>{ v=Math.max(c.min!=null?c.min:-1e9,Math.min(c.max!=null?c.max:1e9, v)); state[key]=v; inp.value=v; redrawD(); };
+  inp.oninput=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ state[key]=v; redrawD(); } };
+  inp.onblur=()=>{ const v=parseFloat(inp.value); commit(isNaN(v)?(c.def||0):v); };
+  up.onclick=()=>commit((parseFloat(inp.value)||0)+(c.step||1));
+  dn.onclick=()=>commit((parseFloat(inp.value)||0)-(c.step||1));
+  return wrap;
+}
+function enumField(key){ const c=CONTROLS[key], s=el("select");
+  for(const o of c.opts){ const op=el("option",{value:o,text:o},s); if(state[key]==o)op.selected=true; }
+  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType")buildPanel(); redraw(); }; return s; }
+function boolField(key){ const lab=el("label",{class:"chk"}); const cb=el("input",{type:"checkbox"},lab); cb.checked=!!state[key];
+  cb.onchange=()=>{ state[key]=cb.checked; buildPanel(); redraw(); }; lab.appendChild(document.createTextNode(" on")); return lab; }
+function sectionField(key){
+  const c=CONTROLS[key], frag=document.createDocumentFragment();
+  const listId = slotKind(state.conn,key)==="col"?"dlCol":"dlBeam";
+  const inp=el("input",{list:listId,value:state[key],class:"secinp"},frag);
+  inp.onchange=()=>{ state[key]=inp.value.trim().toUpperCase(); buildPanel(); redraw(); };
+  inp.oninput=()=>{ state[key]=inp.value.trim().toUpperCase(); redrawD(); };
+  if(state[key]==="CUSTOM"){
+    const ck=key==="secSec"?"secCustom":"primCustom", cv=state[ck];
+    const grid=el("div",{class:"fld full",style:"display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px"},frag);
+    for(const f of ["h","b","tf","tw","r"]){ const w=el("div",{},grid); el("label",{text:f,style:"font-size:10px"},w);
+      const ii=el("input",{type:"number",value:cv[f],step:f==="r"?0.5:1,style:"width:100%"},w);
+      ii.oninput=()=>{ cv[f]=parseFloat(ii.value)||0; redrawD(); }; }
+  }
+  return frag;
+}
+function buildPanel(){
+  const box=document.getElementById("accordions"); box.innerHTML="";
+  // global group
+  const gWrap=el("details",{class:"acc",open:""},box); el("summary",{text:"Global"},gWrap);
+  const gBody=el("div",{class:"body"},gWrap);
+  const gradeF=el("div",{class:"fld"},gBody); el("label",{text:"Steel grade"},gradeF);
+  const gs=el("select",{},gradeF); for(const o of ["S275","S355"]){const op=el("option",{value:o,text:o},gs); if(state.grade==o)op.selected=true;} gs.onchange=()=>{state.grade=gs.value;redraw();};
+  const scF=el("div",{class:"fld"},gBody); el("label",{text:"Drawing scale"},scF);
+  const ss=el("select",{},scF); for(const o of [["auto","auto"],["5","1:5"],["10","1:10"],["20","1:20"]]){const op=el("option",{value:o[0],text:o[1]},ss); if(String(state.drawScale)==o[0])op.selected=true;} ss.onchange=()=>{state.drawScale=ss.value;redraw();};
+  // connection groups
+  const keys=SCHEMA[state.conn]||[]; const groups=[];
+  for(const k of keys){ const c=CONTROLS[k]; if(!c||c.hidden) continue; const g=c.group;
+    let grp=groups.find(x=>x.g===g); if(!grp){grp={g,keys:[]};groups.push(grp);} grp.keys.push(k); }
+  for(const grp of groups){
+    const acc=el("details",{class:"acc",open:""},box); el("summary",{text:grp.g},acc);
+    const body=el("div",{class:"body"},acc);
+    for(const k of grp.keys){ const c=CONTROLS[k];
+      // conditional visibility
+      if(k==="doublerT" && !state.doubler) continue;
+      if(k==="wallT" && state.concType!=="wall") continue;
+      if((k==="sa1"||k==="sa2")) {/* keep */}
+      const f=el("div",{class:"fld"+(c.type==="section"?" full":"")},body);
+      const lab=el("label",{},f); lab.textContent=c.label; if(c.hint){ const ic=el("span",{class:"ico",title:c.hint,text:" ⓘ"}); lab.appendChild(ic); }
+      let ctl;
+      if(c.type==="number") ctl=numField(k);
+      else if(c.type==="enum") ctl=enumField(k);
+      else if(c.type==="bool") ctl=boolField(k);
+      else if(c.type==="section") ctl=sectionField(k);
+      f.appendChild(ctl);
+    }
+  }
+}
+
+/* =====================================================================
+   Export / import / print  (§8)  + Phase-2 capacity stub (§9.6)
+   ===================================================================== */
+const Capacity = { boltShear:()=>null, plateBearing:()=>null, weldResistance:()=>null, run:()=>null }; // stub boundary
+
+function resolveVars(s){ const cs=getComputedStyle(document.documentElement);
+  return s.replace(/var\((--[a-zA-Z0-9_]+)\)/g,(m,n)=>(cs.getPropertyValue(n).trim()||"#000")); }
+function standaloneSVG(){
+  const svgA=document.getElementById("viewA"), svgB=document.getElementById("viewB");
+  const showA=state.view!=="B", showB=state.view!=="A";
+  const parts=[]; let W=0,H=0, gap=20;
+  if(showA){ const vb=svgA.getAttribute("viewBox").split(" ").map(Number); parts.push({svg:svgA,w:vb[2],h:vb[3]}); }
+  if(showB){ const vb=svgB.getAttribute("viewBox").split(" ").map(Number); parts.push({svg:svgB,w:vb[2],h:vb[3]}); }
+  const vH=Math.max(...parts.map(p=>p.h)); W=parts.reduce((a,p)=>a+p.w,0)+gap*(parts.length-1);
+  const strip=34; H=vH+strip;
+  let inner="", x=0;
+  for(const p of parts){ inner+=`<g transform="translate(${x},0)">`+p.svg.innerHTML+`</g>`; x+=p.w+gap; }
+  // §7 title strip: connection ID + members + date, report-ready
+  const cd=CONN[state.conn], scl=document.getElementById("scaleA").textContent||"";
+  const title=`${state.conn} — ${cd.name}    ${memberSummary()}    ${state.grade}    ${new Date().toISOString().slice(0,10)}    Scale ${scl}`;
+  const footer=`<g transform="translate(0,${vH})"><rect x="0" y="0" width="${W}" height="${strip}" fill="#ffffff" stroke="#1a1f26" stroke-width="0.8"/>`
+    +`<text x="10" y="22" font-family="Segoe UI,Arial" font-size="13" font-weight="700" fill="#1a1f26">${title.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</text></g>`;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
+       +`<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`+inner+footer+`</svg>`;
+  return resolveVars(s);
+}
+function download(name, blob){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+function exportSVG(){ download(state.conn+".svg", new Blob([standaloneSVG()],{type:"image/svg+xml"})); }
+function exportPNG(){
+  const s=standaloneSVG(), img=new Image();
+  const m=/width="(\d+(?:\.\d+)?)" height="(\d+(?:\.\d+)?)"/.exec(s); const W=+m[1],H=+m[2], sc=2;
+  img.onload=()=>{ const cv=document.createElement("canvas"); cv.width=W*sc; cv.height=H*sc; const ctx=cv.getContext("2d");
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height); ctx.scale(sc,sc); ctx.drawImage(img,0,0);
+    cv.toBlob(b=>download(state.conn+"@2x.png",b),"image/png"); };
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(s);
+}
+function exportJSON(){ download(state.conn+".json", new Blob([JSON.stringify(state,null,2)],{type:"application/json"})); }
+function importJSON(file){ const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result);
+  if(!o.conn||!SCHEMA[o.conn]) throw new Error("unrecognised connection id"); state=Object.assign(defaultState(o.conn),o);
+  document.body.classList.toggle("dark",state.theme==="dark"); buildTiles(); buildPanel(); redraw();
+  }catch(e){ alert("Load failed: "+e.message); } }; r.readAsText(file); }
+
+function bindTopbar(){
+  document.getElementById("viewSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return;
+    state.view=b.dataset.v; [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b)); redraw(); });
+  document.getElementById("btnTable").onclick=()=>{ state.showParamTable=!state.showParamTable;
+    const w=document.getElementById("paramTableWrap"); if(state.showParamTable)renderParamTable(); else w.hidden=true; };
+  document.getElementById("btnSVG").onclick=exportSVG;
+  document.getElementById("btnPNG").onclick=exportPNG;
+  document.getElementById("btnSave").onclick=exportJSON;
+  document.getElementById("btnLoad").onclick=()=>document.getElementById("fileIn").click();
+  document.getElementById("fileIn").onchange=e=>{ if(e.target.files[0])importJSON(e.target.files[0]); e.target.value=""; };
+  document.getElementById("btnPrint").onclick=()=>{ if(!state.showParamTable){state.showParamTable=true;renderParamTable();} window.print(); };
+  document.getElementById("btnTheme").onclick=()=>{ document.body.classList.toggle("dark"); state.theme=document.body.classList.contains("dark")?"dark":"light"; redraw(); };
+}
+function buildDatalists(){
+  const ukb=sectionsByType("UKB"), ukc=sectionsByType("UKC");
+  const mk=(id,first,second)=>{ const dl=el("datalist",{id},document.body);
+    el("option",{value:"CUSTOM",label:"Custom I-section"},dl);
+    for(const s of first) el("option",{value:s.name,label:`${s.type} ${s.mass}kg/m`},dl);
+    for(const s of second) el("option",{value:s.name,label:`${s.type} ${s.mass}kg/m`},dl); };
+  mk("dlBeam",ukb,ukc); mk("dlCol",ukc,ukb);
+}
+
+/* ============================== init ================================ */
+function init(){
+  buildDatalists(); buildTiles(); buildPanel(); bindTopbar();
+  window.addEventListener("resize", debounce(()=>{ if(state.drawScale==="auto") redraw(); },120));
+  redraw();
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+</script>
+</body>
+</html>
