@@ -887,6 +887,12 @@ function finElevation(st, opts){
   const xb0 = baseX + g;                             // secondary beam end (gap g from reference face)
   const wleg = Math.max(st.weldLeg, 4);
   const plTop = plCy + plH/2, plBot = plCy - plH/2;  // fin plate top / bottom edges
+  // "outside" plate is full depth at the support but must be cropped where it overlaps the
+  // supported beam, so it does not foul that beam's flange(s) (per SCI/detailing practice).
+  const topU = yc + sec.h/2 - sec.tf, botU = yc - sec.h/2 + sec.tf;   // supported flange undersides
+  const cropTop = outside ? Math.min(plTop, topU) : plTop;
+  const cropBot = outside ? Math.max(plBot, botU) : plBot;
+  const cropped = outside && (plTop-cropTop>0.5 || cropBot-plBot>0.5);
 
   // main/supporting beam shown as a cut I-section, web right face at x=0
   const iP = iSectionPts(-prim.tw/2, 0, prim.h, prim.b, prim.tf, prim.tw);
@@ -901,8 +907,12 @@ function finElevation(st, opts){
     label(out, -prim.tw-sw, plTop+14, "stiffener PL "+Math.round(st.ts)+" thk", {anchor:"start", size:10});
   }
 
-  // fin plate welded to main web (all-around web + both flanges when "outside"), projecting right
-  out.push(Pr.r(0, plBot, bp, plH, "plate"));
+  // fin plate welded to main web (all-around web + both flanges when "outside"), projecting right.
+  // Full depth at the support; cropped past the beam end (x>=xb0) to clear the supported flange(s).
+  if(cropped)
+    out.push(Pr.poly([[0,plTop],[xb0,plTop],[xb0,cropTop],[bp,cropTop],[bp,cropBot],[xb0,cropBot],[xb0,plBot],[0,plBot]],"plate"));
+  else
+    out.push(Pr.r(0, plBot, bp, plH, "plate"));
   out.push(...weldRun(0, plBot, 0, plTop, wleg, 1));                  // web weld (full plate height)
   if(outside){
     out.push(...weldRun(0, plTop, ftip, plTop, wleg, 1));            // top-flange weld
@@ -913,7 +923,7 @@ function finElevation(st, opts){
   const bg = boltGridElev(bgx, yc, st.n1, st.n2, st.p1, st.p2, d0, "bolts"); out.push(...bg.prims);
 
   // dimensions
-  chainV(out, xs[0], -((prim.b+prim.tw)/2 + 32 + xs[0]), [plTop].concat(ys).concat([plBot]).sort((p,q)=>q-p), "p1");
+  chainV(out, xs[0], -((prim.b+prim.tw)/2 + 32 + xs[0]), [cropTop].concat(ys).concat([cropBot]).sort((p,q)=>q-p), "p1");
   dimV(out, xb0+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
   dimH(out, yc-sec.h/2-26, baseX, baseX+g, -20, String(g), "gap");
   if(outside) dimH(out, plTop+22, 0, ftip, 18, String(Math.round(ftip)), "proj"); // plate cantilever over the flange
@@ -921,7 +931,7 @@ function finElevation(st, opts){
   if(notch.top){ dimH(out, yc+sec.h/2+18, xb0, xb0+notch.top.len, 16, String(notch.top.len), "notch");
                  dimV(out, xb0+notch.top.len+8, yc+sec.h/2, yc+sec.h/2-notch.top.dep, 22, String(notch.top.dep), "notch"); }
   label(out, xb0+Lsec*0.5, yc+sec.h/2+30, sec.name+"  ("+(opts.tag||"supported")+")", {anchor:"middle", weight:"bold"});
-  label(out, bp+12, plBot-6, [plCallout(st.tp,bp,plH,st.grade)+(outside?"  (welded all round)":""),
+  label(out, bp+12, plBot-6, [plCallout(st.tp,bp,plH,st.grade)+(outside?(cropped?"  (welded all round; cropped to clear flange)":"  (welded all round)"):""),
         bCallout(st.n1*st.n2, st.bolt, st.boltGrade, d0)], {lh:14});
   return out;
 }

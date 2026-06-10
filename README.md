@@ -45,8 +45,11 @@ auto-notch (top = tops flush → coped; centre = mid-aligned, no cope if it fits
   of the flanges (gap `g` measured from the flange tip) so **no cope** is needed — used when
   the members are equal/near-equal depth (e.g. `SB4→SB4`, `SB4→SB3`), where framing between
   the flanges would force an impractical double cope. A shallower secondary beam bolts to the
-  upper part of the plate with the plate visible below it. The cope + plate-height controls
-  hide in this mode and a `W-FINEXT` advisory flags the longer lever arm (SSSS long fin plate).
+  upper part of the plate; where the plate overlaps that beam it is **cropped to clear the
+  supported beam's flange(s)** (full-depth stiffener at the support, trimmed at the beam — per
+  SCI detailing practice), with the full-depth portion visible at the support. The cope +
+  plate-height controls hide in this mode and a `W-FINEXT` advisory flags the longer lever arm
+  (SSSS long fin plate).
 
 `BB-FIN` has two further toggles for **double-sided** framing:
 - **`Beam on far side`** — adds an *independent* secondary beam (its own `Far beam (side 2)`
