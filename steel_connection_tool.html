@@ -255,6 +255,7 @@ const CONTROLS = {
   grout:{group:G.PLATE,type:"number",def:30,min:0,max:75,step:5,label:"Grout thickness"},
   // ---- notch (BB) ----
   align:{group:G.GEOM,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Beam alignment",hint:"top = tops flush (typical floor); centre = mid-aligned"},
+  finPos:{group:G.GEOM,type:"enum",def:"between",opts:["between","outside"],label:"Fin plate position",hint:"between = secondary frames inside the supporting flanges (auto-cope); outside = extended fin plate cantilevers past the flange tip, secondary stays clear (no cope)"},
   notchMode:{group:G.GEOM,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Notch"},
   notchLen:{group:G.GEOM,type:"number",def:0,min:0,max:400,step:5,label:"Notch length",hint:"0 = auto"},
   notchDep:{group:G.GEOM,type:"number",def:0,min:0,max:300,step:5,label:"Notch depth",hint:"0 = auto"},
@@ -284,7 +285,7 @@ const CONTROLS = {
 
 /* Per-connection UI: ordered list of control keys (grouped automatically). */
 const SCHEMA = {
-  "BB-FIN":["secSec","primSec","align","notchMode","notchLen","notchDep","tp","hp","bp","g",
+  "BB-FIN":["secSec","primSec","align","finPos","notchMode","notchLen","notchDep","tp","hp","bp","g",
             "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
   "BB-EP":["secSec","primSec","align","notchMode","notchLen","notchDep","tep","g",
            "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg"],
@@ -633,6 +634,9 @@ function renderView(svg, prims, unifiedScale){
 // supported-beam centroid offset relative to main-beam centroid (y=0)
 function alignYc(align, prim, sec){ if(align==="centre") return 0; const d=(prim.h-sec.h)/2; return align==="bottom"? -d : d; }
 function notchAuto(st, sec, prim){
+  // "outside" fin plate: secondary beam stays clear of the supporting flanges
+  // (cantilevered/extended fin plate) so it is never coped.
+  if(st.conn==="BB-FIN" && st.finPos==="outside") return {top:null, bot:null, mode:"none", len:0, dep:0};
   const yc = alignYc(st.align||"top", prim, sec);
   const len = st.notchLen>0 ? st.notchLen : Math.ceil((prim.b/2 - prim.tw/2 + 10)/5)*5;
   const dep = st.notchDep>0 ? st.notchDep : Math.ceil((prim.tf + prim.r + 5)/5)*5;
@@ -653,12 +657,18 @@ function notchAuto(st, sec, prim){
 function finGeom(st){
   const {sec,prim} = members(), b = boltProps();
   const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*b.d);
-  const bp = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2;
+  const bpRef = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2; // plate length measured from the support reference face
+  // "outside" (extended) fin plate: the secondary beam frames past the supporting
+  // flange tip, so the plate cantilevers from the welded web out to the bolt line.
+  const outside = st.conn==="BB-FIN" && st.finPos==="outside";
+  const ftip = (prim.b - prim.tw)/2;                   // supporting flange tip (web right face at x=0)
+  const baseX = outside ? ftip : 0;                    // x of the support reference face for gap + bolts
+  const bp = baseX + bpRef;                            // full plate length from the welded web edge
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
   const yc = alignYc(st.align||"top", prim, sec);      // supported-beam framing offset
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
-  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(la + j*st.p2);
-  return {sec, prim, b, la, bp, hp, yc, ys, xs, d0:holeDia()};
+  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(baseX + la + j*st.p2);
+  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, d0:holeDia()};
 }
 function epGeom(st){
   const {sec,prim}=members(), b=boltProps();
@@ -820,11 +830,12 @@ GEO["BB-EP"] = function(st){
 /* ===== connections/BB-FIN.js =========================================== */
 /* ---------------- BB-FIN : Beam-to-beam fin plate ------------------- */
 GEO["BB-FIN"] = function(st){
-  const A=[], B=[], fg=finGeom(st), {sec,prim,b,la,bp,hp,yc,ys,xs,d0}=fg;
-  const notch = notchAuto(st, sec, prim);
+  const A=[], B=[], fg=finGeom(st), {sec,prim,b,la,bp,hp,yc,ys,xs,baseX,ftip,outside,d0}=fg;
+  const notch = notchAuto(st, sec, prim);            // "none" when outside (no cope)
   const g = st.g, Lsec = Math.max(sec.h*1.0, 360);
-  const bgx = la + (st.n2-1)*st.p2/2;               // bolt group centre x
-  const ftip = (prim.b - prim.tw)/2;                // main beam right flange tip (web right face at x=0)
+  const bgx = xs[0] + (st.n2-1)*st.p2/2;             // bolt group centre x
+  const xb0 = baseX + g;                             // secondary beam end (gap g from support reference face:
+                                                     // web for "between", flange tip for "outside")
 
   /* ----- View A : MAIN beam SECTION + supported beam ELEVATION (bolts = holes) ----- */
   // main/supporting beam shown as a cut I-section, web right face at x=0
@@ -835,17 +846,18 @@ GEO["BB-FIN"] = function(st){
   A.push(Pr.r(0, yc-hp/2, bp, hp, "plate"));
   A.push(...weldRun(0, yc-hp/2, 0, yc+hp/2, Math.max(st.weldLeg,4), 1));
   A.push(Pr.weld(0, yc-hp/2+10, ftip+50, yc-hp/2-44, {kind:st.weldType, size:st.weldLeg, both:true, text:"typ."}));
-  A.push(...beamElevNotched(g, g+Lsec, yc, sec.h, sec.tf, notch, "out"));
+  A.push(...beamElevNotched(xb0, xb0+Lsec, yc, sec.h, sec.tf, notch, "out"));
   const bg = boltGridElev(bgx, yc, st.n1, st.n2, st.p1, st.p2, d0, "bolts"); A.push(...bg.prims);
   // dimensions
-  chainV(A, la, -((prim.b+prim.tw)/2 + 32 + la), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
-  dimV(A, g+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
-  dimH(A, yc-sec.h/2-26, 0, g, -20, String(g), "gap");
-  if(st.n2>1) chainH(A, yc+hp/2+22, 18, xs, "p2");
-  if(notch.top){ dimH(A, yc+sec.h/2+18, g, g+notch.top.len, 16, String(notch.top.len), "notch");
-                 dimV(A, g+notch.top.len+8, yc+sec.h/2, yc+sec.h/2-notch.top.dep, 22, String(notch.top.dep), "notch"); }
-  label(A, g+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)", {anchor:"middle", weight:"bold"});
-  label(A, bp+12, yc-hp/2-6, [plCallout(st.tp,bp,hp,st.grade),
+  chainV(A, xs[0], -((prim.b+prim.tw)/2 + 32 + xs[0]), [yc+hp/2].concat(ys).concat([yc-hp/2]).sort((p,q)=>q-p), "p1");
+  dimV(A, xb0+Lsec, yc-sec.h/2, yc+sec.h/2, 34, String(Math.round(sec.h)));
+  dimH(A, yc-sec.h/2-26, baseX, baseX+g, -20, String(g), "gap");
+  if(outside) dimH(A, yc+hp/2+22, 0, ftip, 18, String(Math.round(ftip)), "proj"); // plate cantilever over the flange
+  if(st.n2>1) chainH(A, yc+hp/2+(outside?40:22), 18, xs, "p2");
+  if(notch.top){ dimH(A, yc+sec.h/2+18, xb0, xb0+notch.top.len, 16, String(notch.top.len), "notch");
+                 dimV(A, xb0+notch.top.len+8, yc+sec.h/2, yc+sec.h/2-notch.top.dep, 22, String(notch.top.dep), "notch"); }
+  label(A, xb0+Lsec*0.5, yc+sec.h/2+30, sec.name+"  (supported)", {anchor:"middle", weight:"bold"});
+  label(A, bp+12, yc-hp/2-6, [plCallout(st.tp,bp,hp,st.grade)+(outside?"  (extended)":""),
         bCallout(st.n1*st.n2, st.bolt, st.boltGrade, d0)], {lh:14});
 
   /* ----- View B : MAIN beam ELEVATION + supported beam SECTION + bolt side-views ----- */
@@ -1188,6 +1200,11 @@ function validate(st){
     // §6.3 SSSS buildability (warn)
     if(fin && st.tp > 0.5*bd) add("warn","W-DUCT",`tₚ = ${st.tp} > 0.5·d_bolt = ${0.5*bd}; verify ductility per SSSS §2.1.3`,["tp"]);
     if(fin && st.weldLeg < 0.8*st.tp) add("warn","W-WELDLEG",`fin weld s = ${st.weldLeg} < 0.8·tₚ = ${(0.8*st.tp).toFixed(1)} (plate must yield first)`,["weld"]);
+    if(fin && st.conn==="BB-FIN" && st.finPos==="outside"){
+      const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*bd);
+      const lever = Math.round((prim.b-prim.tw)/2 + la + (st.n2-1)*st.p2/2);   // support face → bolt group
+      add("warn","W-FINEXT",`outside (extended) fin plate: lever arm support → bolt group ≈ ${lever} mm — verify plate bending/LTB per SSSS (long fin plate)`,["tp","bp"]);
+    }
     if(active("g") && st.g < 10) add("warn","W-GAPMIN",`gap g = ${st.g} < 10 mm recommended (SSSS)`,["gap"]);
     if(st.n1 < 2) add("warn","W-NMIN","minimum 2 bolt rows recommended",["bolts"]);
     if(ep){ const bpw=st.w+2*Math.max(st.e2,1.5*bd);
@@ -1310,7 +1327,7 @@ function numField(key){
 }
 function enumField(key){ const c=CONTROLS[key], s=el("select");
   for(const o of c.opts){ const op=el("option",{value:o,text:o},s); if(state[key]==o)op.selected=true; }
-  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType")buildPanel(); redraw(); }; return s; }
+  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType"||key==="finPos")buildPanel(); redraw(); }; return s; }
 function boolField(key){ const lab=el("label",{class:"chk"}); const cb=el("input",{type:"checkbox"},lab); cb.checked=!!state[key];
   cb.onchange=()=>{ state[key]=cb.checked; buildPanel(); redraw(); }; lab.appendChild(document.createTextNode(" on")); return lab; }
 function sectionField(key){
@@ -1348,6 +1365,7 @@ function buildPanel(){
       // conditional visibility
       if(k==="doublerT" && !state.doubler) continue;
       if(k==="wallT" && state.concType!=="wall") continue;
+      if((k==="notchMode"||k==="notchLen"||k==="notchDep") && state.conn==="BB-FIN" && state.finPos==="outside") continue;
       if((k==="sa1"||k==="sa2")) {/* keep */}
       const f=el("div",{class:"fld"+(c.type==="section"?" full":"")},body);
       const lab=el("label",{},f); lab.textContent=c.label; if(c.hint){ const ic=el("span",{class:"ico",title:c.hint,text:" ⓘ"}); lab.appendChild(ic); }

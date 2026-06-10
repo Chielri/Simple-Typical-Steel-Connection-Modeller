@@ -27,6 +27,11 @@ function validate(st){
     // §6.3 SSSS buildability (warn)
     if(fin && st.tp > 0.5*bd) add("warn","W-DUCT",`tₚ = ${st.tp} > 0.5·d_bolt = ${0.5*bd}; verify ductility per SSSS §2.1.3`,["tp"]);
     if(fin && st.weldLeg < 0.8*st.tp) add("warn","W-WELDLEG",`fin weld s = ${st.weldLeg} < 0.8·tₚ = ${(0.8*st.tp).toFixed(1)} (plate must yield first)`,["weld"]);
+    if(fin && st.conn==="BB-FIN" && st.finPos==="outside"){
+      const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*bd);
+      const lever = Math.round((prim.b-prim.tw)/2 + la + (st.n2-1)*st.p2/2);   // support face → bolt group
+      add("warn","W-FINEXT",`outside (extended) fin plate: lever arm support → bolt group ≈ ${lever} mm — verify plate bending/LTB per SSSS (long fin plate)`,["tp","bp"]);
+    }
     if(active("g") && st.g < 10) add("warn","W-GAPMIN",`gap g = ${st.g} < 10 mm recommended (SSSS)`,["gap"]);
     if(st.n1 < 2) add("warn","W-NMIN","minimum 2 bolt rows recommended",["bolts"]);
     if(ep){ const bpw=st.w+2*Math.max(st.e2,1.5*bd);

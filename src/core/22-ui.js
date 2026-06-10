@@ -28,7 +28,7 @@ function numField(key){
 }
 function enumField(key){ const c=CONTROLS[key], s=el("select");
   for(const o of c.opts){ const op=el("option",{value:o,text:o},s); if(state[key]==o)op.selected=true; }
-  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType")buildPanel(); redraw(); }; return s; }
+  s.onchange=()=>{ state[key]=s.value; if(key==="axis"||key==="epMode"||key==="concType"||key==="anchorType"||key==="finPos")buildPanel(); redraw(); }; return s; }
 function boolField(key){ const lab=el("label",{class:"chk"}); const cb=el("input",{type:"checkbox"},lab); cb.checked=!!state[key];
   cb.onchange=()=>{ state[key]=cb.checked; buildPanel(); redraw(); }; lab.appendChild(document.createTextNode(" on")); return lab; }
 function sectionField(key){
@@ -66,6 +66,7 @@ function buildPanel(){
       // conditional visibility
       if(k==="doublerT" && !state.doubler) continue;
       if(k==="wallT" && state.concType!=="wall") continue;
+      if((k==="notchMode"||k==="notchLen"||k==="notchDep") && state.conn==="BB-FIN" && state.finPos==="outside") continue;
       if((k==="sa1"||k==="sa2")) {/* keep */}
       const f=el("div",{class:"fld"+(c.type==="section"?" full":"")},body);
       const lab=el("label",{},f); lab.textContent=c.label; if(c.hint){ const ic=el("span",{class:"ico",title:c.hint,text:" ⓘ"}); lab.appendChild(ic); }

@@ -35,6 +35,7 @@ const CONTROLS = {
   grout:{group:G.PLATE,type:"number",def:30,min:0,max:75,step:5,label:"Grout thickness"},
   // ---- notch (BB) ----
   align:{group:G.GEOM,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Beam alignment",hint:"top = tops flush (typical floor); centre = mid-aligned"},
+  finPos:{group:G.GEOM,type:"enum",def:"between",opts:["between","outside"],label:"Fin plate position",hint:"between = secondary frames inside the supporting flanges (auto-cope); outside = extended fin plate cantilevers past the flange tip, secondary stays clear (no cope)"},
   notchMode:{group:G.GEOM,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Notch"},
   notchLen:{group:G.GEOM,type:"number",def:0,min:0,max:400,step:5,label:"Notch length",hint:"0 = auto"},
   notchDep:{group:G.GEOM,type:"number",def:0,min:0,max:300,step:5,label:"Notch depth",hint:"0 = auto"},
@@ -64,7 +65,7 @@ const CONTROLS = {
 
 /* Per-connection UI: ordered list of control keys (grouped automatically). */
 const SCHEMA = {
-  "BB-FIN":["secSec","primSec","align","notchMode","notchLen","notchDep","tp","hp","bp","g",
+  "BB-FIN":["secSec","primSec","align","finPos","notchMode","notchLen","notchDep","tp","hp","bp","g",
             "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
   "BB-EP":["secSec","primSec","align","notchMode","notchLen","notchDep","tep","g",
            "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg"],

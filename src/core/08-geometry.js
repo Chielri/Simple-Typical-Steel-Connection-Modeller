@@ -4,6 +4,9 @@
 // supported-beam centroid offset relative to main-beam centroid (y=0)
 function alignYc(align, prim, sec){ if(align==="centre") return 0; const d=(prim.h-sec.h)/2; return align==="bottom"? -d : d; }
 function notchAuto(st, sec, prim){
+  // "outside" fin plate: secondary beam stays clear of the supporting flanges
+  // (cantilevered/extended fin plate) so it is never coped.
+  if(st.conn==="BB-FIN" && st.finPos==="outside") return {top:null, bot:null, mode:"none", len:0, dep:0};
   const yc = alignYc(st.align||"top", prim, sec);
   const len = st.notchLen>0 ? st.notchLen : Math.ceil((prim.b/2 - prim.tw/2 + 10)/5)*5;
   const dep = st.notchDep>0 ? st.notchDep : Math.ceil((prim.tf + prim.r + 5)/5)*5;
@@ -24,12 +27,18 @@ function notchAuto(st, sec, prim){
 function finGeom(st){
   const {sec,prim} = members(), b = boltProps();
   const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*b.d);
-  const bp = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2;
+  const bpRef = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2; // plate length measured from the support reference face
+  // "outside" (extended) fin plate: the secondary beam frames past the supporting
+  // flange tip, so the plate cantilevers from the welded web out to the bolt line.
+  const outside = st.conn==="BB-FIN" && st.finPos==="outside";
+  const ftip = (prim.b - prim.tw)/2;                   // supporting flange tip (web right face at x=0)
+  const baseX = outside ? ftip : 0;                    // x of the support reference face for gap + bolts
+  const bp = baseX + bpRef;                            // full plate length from the welded web edge
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
   const yc = alignYc(st.align||"top", prim, sec);      // supported-beam framing offset
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
-  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(la + j*st.p2);
-  return {sec, prim, b, la, bp, hp, yc, ys, xs, d0:holeDia()};
+  const xs=[]; for(let j=0;j<st.n2;j++) xs.push(baseX + la + j*st.p2);
+  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, d0:holeDia()};
 }
 function epGeom(st){
   const {sec,prim}=members(), b=boltProps();
