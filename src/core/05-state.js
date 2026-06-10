@@ -19,15 +19,17 @@ let state = defaultState("BB-FIN");
 // Is a control part of the active connection's UI?
 function active(key){ return (SCHEMA[state.conn]||[]).includes(key); }
 
-/* resolve the two member slots for the active connection */
-function members(){
-  const sec = resolveSec(state.secSec, state.secCustom);
-  const prim = resolveSec(state.primSec, state.primCustom);
+/* resolve the two member slots for the active connection.
+   `st` defaults to the global state but can be a derived state (e.g. the far-beam
+   side of a double-sided BB-FIN) so geometry can be computed for either beam. */
+function members(st=state){
+  const sec = resolveSec(st.secSec, st.secCustom);
+  const prim = resolveSec(st.primSec, st.primCustom);
   return {sec, prim};
 }
 
-/* bolt + anchor resolved props */
-function boltProps(){ return BOLTS[state.bolt]||BOLTS.M20; }
-function holeDia(){ const b=boltProps(); return state.hole==="oversize"? b.d+ (b.d>=24?8:6) : b.d0; }
+/* bolt + anchor resolved props (accept a derived state, default global) */
+function boltProps(st=state){ return BOLTS[st.bolt]||BOLTS.M20; }
+function holeDia(st=state){ const b=boltProps(st); return st.hole==="oversize"? b.d+ (b.d>=24?8:6) : b.d0; }
 function anchorDia(){ return ANCHOR_D[state.anchorSize]||20; }
 function hefVal(){ return state.hef>0 ? state.hef : Math.round(12*anchorDia()/5)*5; }

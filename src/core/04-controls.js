@@ -3,7 +3,7 @@
    The UI builds inputs from this; geometry & validation read state[key].
    group: accordion section.  type: number|enum|section|bool.
    ===================================================================== */
-const G = {MEM:"Members",PLATE:"Plate",BOLT:"Bolts",WELD:"Welds",ANC:"Anchors / Concrete",STIFF:"Stiffeners",GEOM:"Geometry"};
+const G = {MEM:"Members",PLATE:"Plate",BOLT:"Bolts",WELD:"Welds",ANC:"Anchors / Concrete",STIFF:"Stiffeners",GEOM:"Geometry",FAR:"Far beam (side 2)"};
 const CONTROLS = {
   // ---- members ----
   secSec:{group:G.MEM,type:"section",def:"UKB533X210X92",label:"Supported member",kind:"beam"},
@@ -36,9 +36,32 @@ const CONTROLS = {
   // ---- notch (BB) ----
   align:{group:G.GEOM,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Beam alignment",hint:"top = tops flush (typical floor); centre = mid-aligned"},
   finPos:{group:G.GEOM,type:"enum",def:"between",opts:["between","outside"],label:"Fin plate position",hint:"between = secondary frames inside the supporting flanges (auto-cope); outside = extended fin plate cantilevers past the flange tip, secondary stays clear (no cope)"},
+  beam2:{group:G.GEOM,type:"bool",def:false,label:"Beam on far side",hint:"adds an independent secondary beam + fin plate framing into the opposite face of the supporting web; View B becomes that beam's elevation"},
+  farStiff:{group:G.GEOM,type:"bool",def:false,label:"Far-side stiffener plate",hint:"adds a stiffener / backing plate on the opposite web face, mirroring the fin plate"},
   notchMode:{group:G.GEOM,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Notch"},
   notchLen:{group:G.GEOM,type:"number",def:0,min:0,max:400,step:5,label:"Notch length",hint:"0 = auto"},
   notchDep:{group:G.GEOM,type:"number",def:0,min:0,max:300,step:5,label:"Notch depth",hint:"0 = auto"},
+  // ---- far beam (side 2 of a double-sided BB-FIN; independent of the near beam) ----
+  secSecB:{group:G.FAR,type:"section",def:"UKB406X178X60",label:"Far beam section",kind:"beam"},
+  secCustomB:{hidden:true,def:{h:406.4,b:177.9,tf:12.8,tw:7.9,r:10.2}},
+  alignB:{group:G.FAR,type:"enum",def:"top",opts:["top","centre","bottom"],label:"Far beam alignment"},
+  finPosB:{group:G.FAR,type:"enum",def:"between",opts:["between","outside"],label:"Far fin plate position"},
+  notchModeB:{group:G.FAR,type:"enum",def:"auto",opts:["auto","none","single","double"],label:"Far notch"},
+  tpB:{group:G.FAR,type:"number",def:10,min:6,max:25,step:1,label:"Far plate thk tₚ"},
+  hpB:{group:G.FAR,type:"number",def:0,min:0,max:2000,step:5,label:"Far plate height",hint:"0 = auto"},
+  bpB:{group:G.FAR,type:"number",def:0,min:0,max:600,step:5,label:"Far plate width",hint:"0 = auto"},
+  gB:{group:G.FAR,type:"number",def:10,min:0,max:30,step:1,label:"Far gap g"},
+  boltB:{group:G.FAR,type:"enum",def:"M20",opts:BOLT_SIZES,label:"Far bolt size"},
+  boltGradeB:{group:G.FAR,type:"enum",def:"8.8",opts:BOLT_GRADES,label:"Far grade"},
+  n1B:{group:G.FAR,type:"number",def:3,min:1,max:12,step:1,label:"Far rows n₁"},
+  n2B:{group:G.FAR,type:"number",def:1,min:1,max:3,step:1,label:"Far cols n₂"},
+  p1B:{group:G.FAR,type:"number",def:70,min:20,max:400,step:5,label:"Far pitch p₁"},
+  p2B:{group:G.FAR,type:"number",def:70,min:20,max:400,step:5,label:"Far gauge p₂"},
+  e1B:{group:G.FAR,type:"number",def:40,min:10,max:200,step:5,label:"Far end dist e₁"},
+  e2B:{group:G.FAR,type:"number",def:40,min:10,max:200,step:5,label:"Far edge dist e₂"},
+  holeB:{group:G.FAR,type:"enum",def:"standard",opts:["standard","oversize"],label:"Far hole type"},
+  weldTypeB:{group:G.FAR,type:"enum",def:"fillet",opts:["fillet","partial-pen butt","full-pen butt"],label:"Far weld type"},
+  weldLegB:{group:G.FAR,type:"number",def:6,min:4,max:15,step:1,label:"Far fillet leg s"},
   // ---- welds ----
   weldType:{group:G.WELD,type:"enum",def:"fillet",opts:["fillet","partial-pen butt","full-pen butt"],label:"Weld type"},
   weldLeg:{group:G.WELD,type:"number",def:6,min:4,max:15,step:1,label:"Fillet leg s"},
@@ -65,8 +88,10 @@ const CONTROLS = {
 
 /* Per-connection UI: ordered list of control keys (grouped automatically). */
 const SCHEMA = {
-  "BB-FIN":["secSec","primSec","align","finPos","notchMode","notchLen","notchDep","tp","hp","bp","g",
-            "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg"],
+  "BB-FIN":["secSec","primSec","align","finPos","beam2","farStiff","notchMode","notchLen","notchDep","tp","hp","bp","g",
+            "bolt","boltGrade","n1","n2","p1","p2","e1","e2","hole","weldType","weldLeg","ts",
+            "secSecB","alignB","finPosB","notchModeB","tpB","hpB","bpB","gB",
+            "boltB","boltGradeB","n1B","n2B","p1B","p2B","e1B","e2B","holeB","weldTypeB","weldLegB"],
   "BB-EP":["secSec","primSec","align","notchMode","notchLen","notchDep","tep","g",
            "bolt","boltGrade","n1","p1","e1","w","hole","weldType","weldLeg"],
   "BB-W":["secSec","primSec","align","notchMode","notchLen","notchDep","weldType","weldLeg","ts","stiffHeight"],

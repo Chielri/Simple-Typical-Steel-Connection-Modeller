@@ -48,6 +48,16 @@ auto-notch (top = tops flush → coped; centre = mid-aligned, no cope if it fits
   upper part of the plate with the plate visible below it. The cope + plate-height controls
   hide in this mode and a `W-FINEXT` advisory flags the longer lever arm (SSSS long fin plate).
 
+`BB-FIN` has two further toggles for **double-sided** framing:
+- **`Beam on far side`** — adds an *independent* secondary beam (its own `Far beam (side 2)`
+  control group: section, alignment, fin-plate position, plate, bolts, weld) framing into the
+  opposite face of the supporting web. **View B switches from the section to that beam's
+  elevation**, so the two panels become the two connection elevations (each fully dimensioned;
+  the far beam is validated with `…-F` codes). The supporting member is shared.
+- **`Far-side stiffener plate`** — adds a stiffener / backing plate on the opposite web face,
+  mirroring the fin plate (welded to the web), to balance the single-sided fin-plate force.
+  Shown in the near elevation and (as a hidden outline) in the section.
+
 | Family | IDs |
 |---|---|
 | Beam → Beam | `BB-FIN` fin plate · `BB-EP` end plate · `BB-W` direct welded |

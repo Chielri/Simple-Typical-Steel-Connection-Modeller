@@ -25,7 +25,7 @@ function notchAuto(st, sec, prim){
   return {top:N, bot:N, mode:"double", len, dep};
 }
 function finGeom(st){
-  const {sec,prim} = members(), b = boltProps();
+  const {sec,prim} = members(st), b = boltProps(st);
   const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*b.d);
   const bpRef = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2; // plate length measured from the support reference face
   // "outside" (extended) fin plate: the secondary beam frames past the supporting flange
@@ -43,7 +43,7 @@ function finGeom(st){
   const plH  = outside ? 2*pyHalf : hp;                // fin plate height (full clear depth when outside)
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
   const xs=[]; for(let j=0;j<st.n2;j++) xs.push(baseX + la + j*st.p2);
-  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, plCy, plH, pyHalf, d0:holeDia()};
+  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, plCy, plH, pyHalf, d0:holeDia(st)};
 }
 function epGeom(st){
   const {sec,prim}=members(), b=boltProps();
