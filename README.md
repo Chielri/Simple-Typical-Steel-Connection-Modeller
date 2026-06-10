@@ -39,12 +39,14 @@ auto-notch (top = tops flush → coped; centre = mid-aligned, no cope if it fits
 `BB-FIN` also has a **`Fin plate position`** control:
 - `between` (default) — the secondary beam frames *inside* the supporting flanges and is
   auto-coped where the flanges clash (the standard arrangement).
-- `outside` — an **extended fin plate** that cantilevers from the welded web *past the
-  supporting flange tip*; the secondary beam stays clear of the flanges (gap `g` measured
-  from the flange tip) so **no cope** is needed. Used when the members are equal/near-equal
-  depth (e.g. SB4→SB4), where framing between the flanges would force an impractical double
-  cope. The cope controls hide in this mode and a `W-FINEXT` advisory flags the longer lever
-  arm to verify per SSSS (long fin plate).
+- `outside` — an **extended fin plate** that fills the clear depth between the supporting
+  flanges and is **fillet-welded all-around** (to the web *and* both flange undersides),
+  cantilevering *past the supporting flange tip* to the bolts. The secondary beam stays clear
+  of the flanges (gap `g` measured from the flange tip) so **no cope** is needed — used when
+  the members are equal/near-equal depth (e.g. `SB4→SB4`, `SB4→SB3`), where framing between
+  the flanges would force an impractical double cope. A shallower secondary beam bolts to the
+  upper part of the plate with the plate visible below it. The cope + plate-height controls
+  hide in this mode and a `W-FINEXT` advisory flags the longer lever arm (SSSS long fin plate).
 
 | Family | IDs |
 |---|---|

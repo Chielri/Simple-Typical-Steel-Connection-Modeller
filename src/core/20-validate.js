@@ -30,7 +30,7 @@ function validate(st){
     if(fin && st.conn==="BB-FIN" && st.finPos==="outside"){
       const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*bd);
       const lever = Math.round((prim.b-prim.tw)/2 + la + (st.n2-1)*st.p2/2);   // support face → bolt group
-      add("warn","W-FINEXT",`outside (extended) fin plate: lever arm support → bolt group ≈ ${lever} mm — verify plate bending/LTB per SSSS (long fin plate)`,["tp","bp"]);
+      add("warn","W-FINEXT",`outside (extended) fin plate, welded all-round to web + both flanges: lever arm support → bolt group ≈ ${lever} mm — verify per SSSS (long fin plate)`,["tp","bp"]);
     }
     if(active("g") && st.g < 10) add("warn","W-GAPMIN",`gap g = ${st.g} < 10 mm recommended (SSSS)`,["gap"]);
     if(st.n1 < 2) add("warn","W-NMIN","minimum 2 bolt rows recommended",["bolts"]);

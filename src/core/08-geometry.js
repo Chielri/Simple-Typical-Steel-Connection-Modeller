@@ -28,17 +28,22 @@ function finGeom(st){
   const {sec,prim} = members(), b = boltProps();
   const la = st.bp>0 ? Math.max(st.bp - st.e2 - (st.n2-1)*st.p2, 20) : Math.max(50, 2*b.d);
   const bpRef = st.bp>0 ? st.bp : la + (st.n2-1)*st.p2 + st.e2; // plate length measured from the support reference face
-  // "outside" (extended) fin plate: the secondary beam frames past the supporting
-  // flange tip, so the plate cantilevers from the welded web out to the bolt line.
+  // "outside" (extended) fin plate: the secondary beam frames past the supporting flange
+  // tip, so the plate cantilevers from the welded web out to the bolt line. It also fills
+  // the clear depth between the supporting flanges and is fillet-welded all-around (web +
+  // both flange undersides); the bolt group still sits at the supported-beam connection.
   const outside = st.conn==="BB-FIN" && st.finPos==="outside";
   const ftip = (prim.b - prim.tw)/2;                   // supporting flange tip (web right face at x=0)
   const baseX = outside ? ftip : 0;                    // x of the support reference face for gap + bolts
   const bp = baseX + bpRef;                            // full plate length from the welded web edge
   const hp = st.hp>0 ? st.hp : (st.n1-1)*st.p1 + 2*st.e1;
   const yc = alignYc(st.align||"top", prim, sec);      // supported-beam framing offset
+  const pyHalf = prim.h/2 - prim.tf;                   // supporting flange underside (symmetric ±)
+  const plCy = outside ? 0 : yc;                       // fin plate centre y
+  const plH  = outside ? 2*pyHalf : hp;                // fin plate height (full clear depth when outside)
   const ys=[], y0=(st.n1-1)*st.p1/2; for(let i=0;i<st.n1;i++) ys.push(yc + y0 - i*st.p1);
   const xs=[]; for(let j=0;j<st.n2;j++) xs.push(baseX + la + j*st.p2);
-  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, d0:holeDia()};
+  return {sec, prim, b, la, bp, bpRef, hp, yc, ys, xs, baseX, ftip, outside, plCy, plH, pyHalf, d0:holeDia()};
 }
 function epGeom(st){
   const {sec,prim}=members(), b=boltProps();
