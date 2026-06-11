@@ -34,9 +34,18 @@ function boolField(key){ const lab=el("label",{class:"chk"}); const cb=el("input
 function sectionField(key){
   const c=CONTROLS[key], frag=document.createDocumentFragment();
   const listId = slotKind(state.conn,key)==="col"?"dlCol":"dlBeam";
-  const inp=el("input",{list:listId,value:state[key],class:"secinp"},frag);
-  inp.onchange=()=>{ state[key]=inp.value.trim().toUpperCase(); buildPanel(); redraw(); };
-  inp.oninput=()=>{ state[key]=inp.value.trim().toUpperCase(); redrawD(); };
+  const inp=el("input",{list:listId,value:state[key],class:"secinp",autocomplete:"off"},frag);
+  const valid=v=>v==="CUSTOM"||!!secByName(v);
+  let prev=state[key];                                   // last committed value (restore target)
+  // A native <datalist> filters its suggestions to the text already in the field, so a
+  // pre-filled full section name collapses the list to that one match (the user sees a
+  // single option). Clear on focus to offer the whole list; restore on blur if nothing
+  // valid was chosen. oninput only commits complete, real section names so partial typing
+  // never trashes the live drawing.
+  inp.onfocus=()=>{ prev=state[key]; inp.placeholder=prev; inp.value=""; };
+  inp.onblur=()=>{ if(!valid(inp.value.trim().toUpperCase())){ state[key]=prev; inp.value=prev; redrawD(); } };
+  inp.onchange=()=>{ const v=inp.value.trim().toUpperCase(); state[key]=valid(v)?v:prev; buildPanel(); redraw(); };
+  inp.oninput=()=>{ const v=inp.value.trim().toUpperCase(); if(valid(v)){ state[key]=v; redrawD(); } };
   if(state[key]==="CUSTOM"){
     const ck=key==="secSec"?"secCustom":key==="secSecB"?"secCustomB":"primCustom", cv=state[ck];
     const grid=el("div",{class:"fld full",style:"display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px"},frag);

@@ -53,6 +53,8 @@ function renderValidation(items){
   h+= ne?`<span class="vbadge e">${ne} error${ne>1?"s":""}</span>`:`<span class="vbadge ok">no errors</span>`;
   if(nw) h+=`<span class="vbadge w">${nw} warn${nw>1?"s":""}</span>`;
   h+=`</h4>`;
+  // Standing disclaimer (§4 review): a clean result is geometry/spacing only — no capacity is computed.
+  h+=`<div class="vnote"><b>Detailing check only</b> — bolt, weld &amp; plate capacities are <b>not</b> calculated. A clear result means geometry &amp; spacing are legal, not that shear, bearing, weld or block-tearing resistance is adequate.</div>`;
   for(const it of items){
     if(it.level==="ok"){ h+=`<div class="vitem ok"><span class="code">OK</span><span>${it.msg}</span></div>`; continue; }
     h+=`<div class="vitem ${it.level==="error"?"e":"w"}"><span class="code">${it.code}</span><span>${it.msg}</span></div>`;
