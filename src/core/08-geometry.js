@@ -65,9 +65,10 @@ function chainH(arr, y, off, xs, tags){
 }
 function dimV(arr,x,y1,y2,off,text,tag){ arr.push(Pr.dim("v",x,y1,x,y2,off,text!=null?text:String(Math.round(Math.abs(y2-y1))),tag?{tag}:{})); }
 function dimH(arr,y,x1,x2,off,text,tag){ arr.push(Pr.dim("h",x1,y,x2,y,off,text!=null?text:String(Math.round(Math.abs(x2-x1))),tag?{tag}:{})); }
+let LBLSEQ=0;
 function label(arr,x,y,lines,o={}){
-  lines=[].concat(lines);
-  lines.forEach((s,i)=>arr.push(Pr.txt(x,y - i*(o.lh||13)/ (o.sc||1),s,Object.assign({size:o.size||11,anchor:o.anchor||"start",c:"label",weight:o.weight||"normal",rot:o.rot||0,mm:true},o.extra))));
+  lines=[].concat(lines); const g="g"+(++LBLSEQ);   // group id so a multi-line callout relaxes as one block
+  lines.forEach((s,i)=>arr.push(Pr.txt(x,y - i*(o.lh||13)/ (o.sc||1),s,Object.assign({size:o.size||11,anchor:o.anchor||"start",c:"label",weight:o.weight||"normal",rot:o.rot||0,mm:true},o.extra,{grp:g}))));
 }
 function plCallout(t,L,H,grade){ return `PL ${Math.round(t)} × ${Math.round(L)} × ${Math.round(H)}, ${grade}`; }
 function bCallout(n,size,grade,d0){ return `${n} No. ${size} Gr ${grade} in ${d0} dia holes`; }
