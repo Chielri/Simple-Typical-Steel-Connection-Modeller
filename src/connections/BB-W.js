@@ -27,7 +27,7 @@ function wSection(st, opts){
   const out=[], {sec,prim}=members(st);
   const yc=alignYc(st.align||"top",prim,sec), fkind=st.weldType, top=yc+sec.h/2, bot=yc-sec.h/2;
   const scx=sec.tw/2, Lmain=Math.max(sec.b+320, 460);
-  out.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out"));
+  out.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out",{noFlange:true})); // no flange inner lines beside the cut section
   // transverse stiffeners on the main web aligned to the supported beam flanges (pair)
   if(st.ts>0){ for(const yy of [yc+sec.h/2-sec.tf/2, yc-sec.h/2+sec.tf/2])
       out.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
@@ -36,8 +36,11 @@ function wSection(st, opts){
   out.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));
   out.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));
   out.push(Pr.poly(iS,"out",{w:1.9}));
-  out.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
-  out.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
+  const wl=Math.max(st.weldLeg,4);
+  out.push(...weldRun(0, bot, 0, top, wl, 1));                       // web weld
+  out.push(...weldRun(scx-sec.b/2, top, scx+sec.b/2, top, wl, -1)); // top-flange weld
+  out.push(...weldRun(scx-sec.b/2, bot, scx+sec.b/2, bot, wl, 1));  // bottom-flange weld
+  out.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,allAround:true,text:"all round"}));
   dimV(out,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
   dimV(out,scx-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
   label(out,scx,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});

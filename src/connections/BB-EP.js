@@ -27,10 +27,14 @@ function epSection(st, opts){
   opts = opts||{};
   const out=[], eg=epGeom(st), {sec,prim,hp,yc,ys,bpw,d0}=eg;
   const half=st.w/2, Lmain=Math.max(bpw+280, 440);
-  out.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out"));
+  out.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out",{noFlange:true}));           // supporting beam (no flange inner lines beside the cut)
   if(opts.stiff) out.push(Pr.r(-st.ts, -(prim.h/2-prim.tf), st.ts, prim.h-2*prim.tf, "plate", {dash:"6,4"})); // far stiffener (hidden)
-  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw); out.push(Pr.poly(iS,"hidden")); // supported beam behind plate
-  out.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate"));                                    // end plate face
+  // supported beam shown as a cut SECTION (hatched), matching BB-FIN / BB-W View B
+  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw);
+  out.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));                               // white mask over the supporting beam behind
+  out.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));                           // section hatch
+  out.push(Pr.poly(iS,"out",{w:1.9}));                                                  // bold cut outline
+  out.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate", {fill:"var(--paper)"}));             // end plate face (opaque — clean bolt face over the beam)
   for(const y of ys){ for(const sx of [-half,half]){ out.push(Pr.c(sx,y,d0/2,"bolt",{tag:"bolts"}));
      out.push(Pr.l(sx-d0*0.35,y,sx+d0*0.35,y,"bolt",{w:0.8})); out.push(Pr.l(sx,y-d0*0.35,sx,y+d0*0.35,"bolt",{w:0.8})); } }
   dimH(out, yc+hp/2+20, -half, half, 16, String(st.w), "w");

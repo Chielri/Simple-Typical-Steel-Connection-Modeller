@@ -462,11 +462,13 @@ function beamElevH(x0,yc,len,h,tf,cls="out"){
 }
 // Beam in elevation shown as a finite SEGMENT with break (cut) lines at both ends —
 // reads as a continuous UB/UC: top flange = 2 lines, bottom flange = 2 lines, broken ends.
-function beamElevBreak(xc,len,yc,h,tf,cls="out"){
+function beamElevBreak(xc,len,yc,h,tf,cls="out",opts={}){
   const x0=xc-len/2, x1=xc+len/2, t=h/2, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
   out.push(Pr.l(x0,top,x1,top,cls));            // top flange outer
-  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));// top flange inner
-  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));// bottom flange inner
+  if(!opts.noFlange){                            // flange inner lines (suppressed where a member is cut over them)
+    out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));// top flange inner
+    out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));// bottom flange inner
+  }
   out.push(Pr.l(x0,bot,x1,bot,cls));            // bottom flange outer
   for(const xe of [x0,x1])                       // break line (zig) at each cut end
     out.push(Pr.path([["M",xe,top],["L",xe,yc+h*0.16],["L",xe-z,yc+h*0.08],
@@ -912,10 +914,14 @@ function epSection(st, opts){
   opts = opts||{};
   const out=[], eg=epGeom(st), {sec,prim,hp,yc,ys,bpw,d0}=eg;
   const half=st.w/2, Lmain=Math.max(bpw+280, 440);
-  out.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out"));
+  out.push(...beamElevBreak(0,Lmain,0,prim.h,prim.tf,"out",{noFlange:true}));           // supporting beam (no flange inner lines beside the cut)
   if(opts.stiff) out.push(Pr.r(-st.ts, -(prim.h/2-prim.tf), st.ts, prim.h-2*prim.tf, "plate", {dash:"6,4"})); // far stiffener (hidden)
-  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw); out.push(Pr.poly(iS,"hidden")); // supported beam behind plate
-  out.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate"));                                    // end plate face
+  // supported beam shown as a cut SECTION (hatched), matching BB-FIN / BB-W View B
+  const iS=iSectionPts(0,yc,sec.h,sec.b,sec.tf,sec.tw);
+  out.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));                               // white mask over the supporting beam behind
+  out.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));                           // section hatch
+  out.push(Pr.poly(iS,"out",{w:1.9}));                                                  // bold cut outline
+  out.push(Pr.r(-bpw/2, yc-hp/2, bpw, hp, "plate", {fill:"var(--paper)"}));             // end plate face (opaque — clean bolt face over the beam)
   for(const y of ys){ for(const sx of [-half,half]){ out.push(Pr.c(sx,y,d0/2,"bolt",{tag:"bolts"}));
      out.push(Pr.l(sx-d0*0.35,y,sx+d0*0.35,y,"bolt",{w:0.8})); out.push(Pr.l(sx,y-d0*0.35,sx,y+d0*0.35,"bolt",{w:0.8})); } }
   dimH(out, yc+hp/2+20, -half, half, 16, String(st.w), "w");
@@ -1049,7 +1055,7 @@ function wSection(st, opts){
   const out=[], {sec,prim}=members(st);
   const yc=alignYc(st.align||"top",prim,sec), fkind=st.weldType, top=yc+sec.h/2, bot=yc-sec.h/2;
   const scx=sec.tw/2, Lmain=Math.max(sec.b+320, 460);
-  out.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out"));
+  out.push(...beamElevBreak(scx,Lmain,0,prim.h,prim.tf,"out",{noFlange:true})); // no flange inner lines beside the cut section
   // transverse stiffeners on the main web aligned to the supported beam flanges (pair)
   if(st.ts>0){ for(const yy of [yc+sec.h/2-sec.tf/2, yc-sec.h/2+sec.tf/2])
       out.push(Pr.r(scx-Lmain*0.36, yy-st.ts/2, Lmain*0.72, st.ts, "plate"));
@@ -1058,8 +1064,11 @@ function wSection(st, opts){
   out.push(Pr.poly(iS,"fillonly",{fill:"var(--paper)"}));
   out.push(Pr.poly(iS,"fillonly",{fill:"url(#hatchSteel)"}));
   out.push(Pr.poly(iS,"out",{w:1.9}));
-  out.push(...weldRun(0, bot, 0, top, Math.max(st.weldLeg,4),1));
-  out.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,text:"typ."}));
+  const wl=Math.max(st.weldLeg,4);
+  out.push(...weldRun(0, bot, 0, top, wl, 1));                       // web weld
+  out.push(...weldRun(scx-sec.b/2, top, scx+sec.b/2, top, wl, -1)); // top-flange weld
+  out.push(...weldRun(scx-sec.b/2, bot, scx+sec.b/2, bot, wl, 1));  // bottom-flange weld
+  out.push(Pr.weld(0, top-6, 70, top+30,{kind:fkind,size:st.weldLeg,both:true,allAround:true,text:"all round"}));
   dimV(out,scx+sec.b/2+30,bot,top,30,String(Math.round(sec.h)));
   dimV(out,scx-Lmain/2-22,-prim.h/2,prim.h/2,-16,String(Math.round(prim.h)));
   label(out,scx,prim.h/2+18,prim.name+"  (main)",{anchor:"middle",weight:"bold"});

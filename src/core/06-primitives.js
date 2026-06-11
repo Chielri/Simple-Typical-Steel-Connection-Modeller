@@ -65,11 +65,13 @@ function beamElevH(x0,yc,len,h,tf,cls="out"){
 }
 // Beam in elevation shown as a finite SEGMENT with break (cut) lines at both ends —
 // reads as a continuous UB/UC: top flange = 2 lines, bottom flange = 2 lines, broken ends.
-function beamElevBreak(xc,len,yc,h,tf,cls="out"){
+function beamElevBreak(xc,len,yc,h,tf,cls="out",opts={}){
   const x0=xc-len/2, x1=xc+len/2, t=h/2, top=yc+t, bot=yc-t, z=Math.min(8,h*0.03), out=[];
   out.push(Pr.l(x0,top,x1,top,cls));            // top flange outer
-  out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));// top flange inner
-  out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));// bottom flange inner
+  if(!opts.noFlange){                            // flange inner lines (suppressed where a member is cut over them)
+    out.push(Pr.l(x0,top-tf,x1,top-tf,cls,{w:1.0}));// top flange inner
+    out.push(Pr.l(x0,bot+tf,x1,bot+tf,cls,{w:1.0}));// bottom flange inner
+  }
   out.push(Pr.l(x0,bot,x1,bot,cls));            // bottom flange outer
   for(const xe of [x0,x1])                       // break line (zig) at each cut end
     out.push(Pr.path([["M",xe,top],["L",xe,yc+h*0.16],["L",xe-z,yc+h*0.08],
